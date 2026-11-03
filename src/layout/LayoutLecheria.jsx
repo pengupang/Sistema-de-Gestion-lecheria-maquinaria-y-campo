@@ -3,6 +3,7 @@ import { Outlet, useNavigate, useLocation } from "react-router-dom"
 import { supabase } from "../lib/supabase"
 import { useAuth } from "../context/AuthContext"
 import SelectorEmpresa from "../components/SelectorEmpresa"
+import VincularTelegram from "../components/VincularTelegram"
 import {
   Leaf,
   ShoppingBasket,
@@ -99,6 +100,7 @@ export default function LayoutLecheria() {
           </h2>
           <div style={styles.headerRight}>
             <SelectorEmpresa />
+            <VincularTelegram />
             <span style={styles.userName}>{perfil?.email ?? "Usuario"}</span>
             {contexto?.esAdmin && contexto.modulos.length > 1 && (
               <button onClick={() => navigate("/portal")} style={styles.logoutBtn} title="Cambiar de área">

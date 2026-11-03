@@ -27,3 +27,6 @@ dist-ssr
 
 # Servidor local de IA (Ollama)
 server/
+
+supabase/.temp
+supabase/.branches
