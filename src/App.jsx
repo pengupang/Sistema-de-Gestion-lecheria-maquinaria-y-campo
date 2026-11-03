@@ -20,6 +20,7 @@ import VistaCalendarioArriendo from './pages/CalendarioMaquinas'
 import VistaHistoricosMaquinaria from './pages/HistoricoMaquinaria'
 import RebanoPotreros from './pages/RebanoPotreros'
 import Sanidad from './pages/Sanidad'
+import Genealogia from './pages/Genealogia'
 
 function App() {
   return (
@@ -60,6 +61,7 @@ function App() {
             <Route path="historicos" element={<VistaHistoricosGastos />} />
             <Route path="rebano" element={<RebanoPotreros />} />
             <Route path="sanidad" element={<Sanidad />} />
+            <Route path="genealogia" element={<Genealogia />} />
           </Route>
         </Route>
 

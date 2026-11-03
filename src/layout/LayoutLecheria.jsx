@@ -17,6 +17,7 @@ import {
   ArrowLeftRight,
   PawPrint, 
   Stethoscope,
+  GitBranch,
 } from "lucide-react"
 
 const navItems = [
@@ -28,6 +29,7 @@ const navItems = [
   { label: "Gastos Históricos",   icon: PieChart,        path: "/lecheria/historicos" },
   { label: "Rebaño y Potreros", icon: PawPrint,    path: "/lecheria/rebano" },
   { label: "Sanidad y Manejo",  icon: Stethoscope, path: "/lecheria/sanidad" },
+  { label: "Genealogía",        icon: GitBranch,   path: "/lecheria/genealogia" },
 ]
 
 export default function LayoutLecheria() {

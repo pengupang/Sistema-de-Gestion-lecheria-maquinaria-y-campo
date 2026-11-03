@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react"
-import { Plus, Pencil, Trash2, Search, AlertTriangle } from "lucide-react"
-import { animales as animalesApi, potreros as potrerosApi } from "../services/lecheria"
+import { useNavigate } from "react-router-dom"
+import { Plus, Pencil, Trash2, Search, AlertTriangle, GitBranch } from "lucide-react"
+import { animales as animalesApi, potreros as potrerosApi, etiquetaAnimal } from "../services/lecheria"
 import ModalLecheria, { Campo } from "../components/ModalLecheria"
+import { descendientes } from "../lib/genealogia"
 import s from "./estilosLecheria"
 
 const CATEGORIAS = {
@@ -18,10 +20,24 @@ const ESTADOS_POTRERO = {
 }
 const TIPOS_PRADERA = ["Pradera permanente", "Pradera sembrada", "Alfalfa", "Cultivo forrajero"]
 
-const animalVacio = { arete: "", nombre: "", categoria: "vaca_ordena", potrero_id: "", estado: "activo", fecha_nacimiento: "" }
+const animalVacio = {
+  arete: "", nombre: "", categoria: "vaca_ordena", sexo: "hembra", potrero_id: "", estado: "activo", fecha_nacimiento: "",
+  madre_id: "", padre_id: "", padre_externo: "",
+}
+// Datos de un animal listos para el formulario (null -> "")
+const formAnimal = (a) => ({
+  ...a,
+  sexo: a.sexo ?? (a.categoria === "toro" ? "macho" : "hembra"),
+  potrero_id: a.potrero_id ?? "",
+  fecha_nacimiento: a.fecha_nacimiento ?? "",
+  madre_id: a.madre_id ?? "",
+  padre_id: a.padre_id ?? "",
+  padre_externo: a.padre_externo ?? "",
+})
 const potreroVacio = { nombre: "", superficie_ha: 0, tipo_pradera: TIPOS_PRADERA[0], estado: "disponible", capacidad: 0 }
 
 export default function RebanoPotreros() {
+  const navigate = useNavigate()
   const [tab, setTab] = useState("animales")
   const [animales, setAnimales] = useState([])
   const [potreros, setPotreros] = useState([])
@@ -81,13 +97,27 @@ export default function RebanoPotreros() {
       if (!arete) return setModalError("El arete (identificador) es obligatorio")
       if (animales.some((a) => a.arete.toLowerCase() === arete.toLowerCase() && a.id !== form.id))
         return setModalError("Ya existe un animal con ese arete")
+      const madreId = form.madre_id === "" || form.madre_id === null ? null : Number(form.madre_id)
+      const padreId = form.padre_id === "" || form.padre_id === null ? null : Number(form.padre_id)
+      if (form.id) {
+        if (madreId === form.id || padreId === form.id)
+          return setModalError("Un animal no puede ser su propio padre o madre")
+        const desc = descendientes(animales, form.id)
+        if ((madreId && desc.has(madreId)) || (padreId && desc.has(padreId)))
+          return setModalError("El padre o la madre no puede ser un descendiente de este animal")
+      }
       payload = {
         arete,
         nombre: form.nombre.trim(),
         categoria: form.categoria,
+        sexo: form.sexo,
         potrero_id: form.potrero_id === "" || form.potrero_id === null ? null : Number(form.potrero_id),
         estado: form.estado,
         fecha_nacimiento: form.fecha_nacimiento || null,
+        madre_id: madreId,
+        padre_id: padreId,
+        // el padre "externo" (toro/semen de fuera del predio) solo aplica si no hay padre en el sistema
+        padre_externo: padreId ? null : form.padre_externo.trim() || null,
       }
     } else {
       const nombre = form.nombre.trim()
@@ -208,7 +238,8 @@ export default function RebanoPotreros() {
                     </td>
                     <td style={s.td}>
                       <div style={s.actions}>
-                        <button style={s.iconBtnGreen} onClick={() => abrir("animal", { ...a, potrero_id: a.potrero_id ?? "", fecha_nacimiento: a.fecha_nacimiento ?? "" })}><Pencil size={14} /></button>
+                        <button style={s.iconBtnGreen} title="Ver genealogía" onClick={() => navigate(`/lecheria/genealogia?animal=${a.id}`)}><GitBranch size={14} /></button>
+                        <button style={s.iconBtnGreen} title="Editar" onClick={() => abrir("animal", formAnimal(a))}><Pencil size={14} /></button>
                         <button style={s.iconBtnRed} onClick={() => eliminarAnimal(a)}><Trash2 size={14} /></button>
                       </div>
                     </td>
@@ -261,8 +292,21 @@ export default function RebanoPotreros() {
           <Campo label="Arete / ID"><input style={s.input} value={modal.form.arete} onChange={(e) => setCampo("arete", e.target.value)} /></Campo>
           <Campo label="Nombre (opcional)"><input style={s.input} value={modal.form.nombre} onChange={(e) => setCampo("nombre", e.target.value)} /></Campo>
           <Campo label="Categoría">
-            <select style={s.input} value={modal.form.categoria} onChange={(e) => setCampo("categoria", e.target.value)}>
+            <select
+              style={s.input}
+              value={modal.form.categoria}
+              onChange={(e) => {
+                setCampo("categoria", e.target.value)
+                if (e.target.value === "toro") setCampo("sexo", "macho")
+              }}
+            >
               {Object.entries(CATEGORIAS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </select>
+          </Campo>
+          <Campo label="Sexo">
+            <select style={s.input} value={modal.form.sexo} onChange={(e) => setCampo("sexo", e.target.value)}>
+              <option value="hembra">Hembra</option>
+              <option value="macho">Macho</option>
             </select>
           </Campo>
           <Campo label="Potrero">
@@ -278,6 +322,27 @@ export default function RebanoPotreros() {
               <option value="baja">Baja</option>
             </select>
           </Campo>
+          <Campo label="Madre">
+            <select style={s.input} value={modal.form.madre_id} onChange={(e) => setCampo("madre_id", e.target.value)}>
+              <option value="">Desconocida</option>
+              {animales
+                .filter((a) => (a.sexo ?? "hembra") === "hembra" && a.id !== modal.form.id)
+                .map((a) => <option key={a.id} value={a.id}>{etiquetaAnimal(a)}</option>)}
+            </select>
+          </Campo>
+          <Campo label="Padre">
+            <select style={s.input} value={modal.form.padre_id} onChange={(e) => setCampo("padre_id", e.target.value)}>
+              <option value="">Desconocido / externo</option>
+              {animales
+                .filter((a) => a.sexo === "macho" && a.id !== modal.form.id)
+                .map((a) => <option key={a.id} value={a.id}>{etiquetaAnimal(a)}</option>)}
+            </select>
+          </Campo>
+          {!modal.form.padre_id && (
+            <Campo label="Padre externo (toro o semen de fuera, opcional)" full>
+              <input style={s.input} placeholder="Ej: Holstein 'Rex' (inseminación)" value={modal.form.padre_externo} onChange={(e) => setCampo("padre_externo", e.target.value)} />
+            </Campo>
+          )}
         </ModalLecheria>
       )}
 
