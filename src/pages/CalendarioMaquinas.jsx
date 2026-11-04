@@ -25,7 +25,6 @@ export default function VistaCalendarioArriendo() {
   const today = new Date()
   const [viewDate, setViewDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1))
   const [selectedDay, setSelectedDay] = useState(null)
-  const [modal, setModal] = useState(null)
 
   const anio = viewDate.getFullYear()
   const mes = viewDate.getMonth()
@@ -53,10 +52,6 @@ export default function VistaCalendarioArriendo() {
 
   return (
     <div style={styles.container}>
-      <div style={styles.topBar}>
-        <div><h2 style={styles.title}>Calendario de Arriendos</h2><p style={styles.sub}>{nArriendos} arriendos y {eventos.length - nArriendos} mantenciones en {MESES[mes].toLowerCase()} {anio}</p></div>
-        <button style={styles.btnAdd} onClick={()=>setModal({})}><Plus size={15}/> Nuevo arriendo</button>
-      </div>
 
       {/* Leyenda */}
       <div style={styles.leyenda}>
@@ -112,14 +107,6 @@ export default function VistaCalendarioArriendo() {
         </div>
       </div>
 
-      {modal && (
-        <ModalArriendo
-          inicial={selectedDay ? { inicio: iso(anio, mes, selectedDay), fin: iso(anio, mes, selectedDay) } : {}}
-          catalogo={catalogo}
-          onClose={()=>setModal(null)}
-          onGuardado={async ()=>{ setModal(null); await recargar() }}
-        />
-      )}
     </div>
   )
 }

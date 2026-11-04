@@ -39,13 +39,14 @@ function App() {
           <Route path="/maquinaria" element={<LayoutMaquinaria />}>
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<DashboardMaquinaria />} />
+            <Route path="historicos" element={<VistaHistoricosMaquinaria />} />
             <Route path="maquinas" element={<VistaMaquinaria />} />
             <Route path="clientes" element={<VistaClientes />} />
             <Route path="servicios" element={<VistaServicios />} />
             <Route path="arriendos" element={<VistaArriendos />} />
             <Route path="facturacion" element={<VistaFacturacion />} />
             <Route path="calendario" element={<VistaCalendarioArriendo />} />
-            <Route path="historicos" element={<VistaHistoricosMaquinaria />} />
+            
           </Route>
         </Route>
 

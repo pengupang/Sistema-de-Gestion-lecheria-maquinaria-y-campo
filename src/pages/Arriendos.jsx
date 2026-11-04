@@ -4,7 +4,6 @@ import { arriendos as api, catalogos } from "../services/maquinaria"
 import useCarga from "../lib/useCarga"
 import { clp, fechaCL } from "../lib/formato"
 import EstadoCarga from "../components/EstadoCarga"
-import ModalArriendo from "../components/ModalArriendo"
 import s, { ESTADO_ARRIENDO } from "./EstilosMaquinaria"
 
 const POR_PAGINA = 100
@@ -22,7 +21,7 @@ export default function VistaArriendos() {
   const [fAnio, setFAnio] = useState(anioActual)
   const [fEstado, setFEstado] = useState("")
   const [limite, setLimite] = useState(POR_PAGINA)
-  const [modal, setModal] = useState(null)
+  
 
   const anios = useMemo(() => [...new Set(lista.map((a) => a.inicio.slice(0, 4)))].sort().reverse(), [lista])
 
@@ -63,7 +62,7 @@ export default function VistaArriendos() {
           <h2 style={s.title}>Arriendos</h2>
           <p style={s.sub}>{filtrados.length} registros{fAnio ? ` en ${fAnio}` : ""}</p>
         </div>
-        <button style={s.btnAdd} onClick={() => setModal({})} disabled={cargando}><Plus size={15} /> Nuevo arriendo</button>
+        
       </div>
 
       <div style={s.statsRow}>
@@ -137,14 +136,7 @@ export default function VistaArriendos() {
         </div>
       )}
 
-      {modal && (
-        <ModalArriendo
-          inicial={modal.id ? { ...modal, cliente_id: modal.cliente_id, maquina_id: modal.maquina_id, servicio_id: modal.servicio_id } : {}}
-          catalogo={catalogo}
-          onClose={() => setModal(null)}
-          onGuardado={async () => { setModal(null); await recargar() }}
-        />
-      )}
+      
     </div>
   )
 }
