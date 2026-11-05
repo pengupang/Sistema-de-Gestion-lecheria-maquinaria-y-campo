@@ -1,10 +1,9 @@
 import { useState } from "react"
-import { Plus, ChevronLeft, ChevronRight } from "lucide-react"
-import { calendario, catalogos, maquinas as maquinasApi } from "../services/maquinaria"
-import useCarga from "../lib/useCarga"
-import { fechaCL } from "../lib/formato"
-import EstadoCarga from "../components/EstadoCarga"
-import ModalArriendo from "../components/ModalArriendo"
+import { ChevronLeft, ChevronRight } from "lucide-react"
+import { calendario, maquinas as maquinasApi } from "@/services/maquinaria"
+import useCarga from "@/lib/useCarga"
+import { fechaCL } from "@/lib/formato"
+import EstadoCarga from "@/components/EstadoCarga"
 
 // Un color por máquina (se asignan en orden; si hay más de 6 máquinas se repiten)
 const PALETA = [
@@ -21,10 +20,12 @@ const DIAS = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"]
 const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
 const iso = (y, m, d) => `${y}-${String(m + 1).padStart(2,"0")}-${String(d).padStart(2,"0")}`
 
+// Vista de solo lectura: los arriendos se registran en /maquinaria/registrar
 export default function VistaCalendarioArriendo() {
   const today = new Date()
   const [viewDate, setViewDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1))
   const [selectedDay, setSelectedDay] = useState(null)
+  const [fMaquina, setFMaquina] = useState("")
 
   const anio = viewDate.getFullYear()
   const mes = viewDate.getMonth()
@@ -34,9 +35,9 @@ export default function VistaCalendarioArriendo() {
   const hasta = iso(anio, mes, daysInMonth)
 
   // Eventos (arriendos + mantenciones) que tocan el mes visible; se recarga al cambiar de mes
-  const { datos: eventos, cargando, error, recargar } = useCarga(() => calendario(desde, hasta), [], desde)
+  const { datos: todos, cargando, error, recargar } = useCarga(() => calendario(desde, hasta), [], desde)
+  const eventos = fMaquina ? todos.filter((e) => String(e.maquina_id) === fMaquina) : todos
   const { datos: maquinas } = useCarga(maquinasApi.listar, [])
-  const { datos: catalogo } = useCarga(catalogos, { clientes: [], maquinas: [], servicios: [] })
 
   const colorDe = (e) => (e.origen === "mantencion" ? MANTENCION : PALETA[Math.max(0, maquinas.findIndex((m) => m.id === e.maquina_id)) % PALETA.length])
 
@@ -52,13 +53,18 @@ export default function VistaCalendarioArriendo() {
 
   return (
     <div style={styles.container}>
+      <div style={styles.topBar}>
+        <div><h2 style={styles.title}>Calendario de Arriendos</h2><p style={styles.sub}>{nArriendos} arriendos y {eventos.length - nArriendos} mantenciones en {MESES[mes].toLowerCase()} {anio}</p></div>
+      </div>
 
       {/* Leyenda */}
       <div style={styles.leyenda}>
         {maquinas.map((m, i)=>(
-          <span key={m.id} style={{...styles.leyendaItem,backgroundColor:PALETA[i % PALETA.length].bg,color:PALETA[i % PALETA.length].color}}><span style={{...styles.dot,backgroundColor:PALETA[i % PALETA.length].color}}/>{m.nombre} {m.modelo}</span>
+          <span key={m.id} onClick={()=>setFMaquina(f => f === String(m.id) ? "" : String(m.id))} title="Filtrar por esta máquina"
+            style={{...styles.leyendaItem,cursor:"pointer",opacity:fMaquina && fMaquina !== String(m.id) ? 0.35 : 1,backgroundColor:PALETA[i % PALETA.length].bg,color:PALETA[i % PALETA.length].color}}><span style={{...styles.dot,backgroundColor:PALETA[i % PALETA.length].color}}/>{m.nombre} {m.modelo}</span>
         ))}
         <span style={{...styles.leyendaItem,backgroundColor:MANTENCION.bg,color:MANTENCION.color}}><span style={{...styles.dot,backgroundColor:MANTENCION.color}}/>Mantención</span>
+        {fMaquina && <button onClick={()=>setFMaquina("")} style={{...styles.leyendaItem,border:"1px solid #E2E8F0",background:"#fff",color:"#64748B",cursor:"pointer"}}>Ver todas</button>}
       </div>
 
       <EstadoCarga cargando={false} error={error} onReintentar={recargar} />
@@ -116,7 +122,6 @@ const styles = {
   topBar:{display:"flex",justifyContent:"space-between",alignItems:"flex-start"},
   title:{fontSize:"18px",fontWeight:700,color:"#1E293B",margin:0},
   sub:{fontSize:"13px",color:"#94A3B8",margin:"4px 0 0 0"},
-  btnAdd:{display:"flex",alignItems:"center",gap:"6px",padding:"8px 16px",backgroundColor:"#4A6FA5",border:"none",borderRadius:"6px",color:"#fff",fontSize:"13px",fontWeight:600,cursor:"pointer"},
   leyenda:{display:"flex",gap:"10px",flexWrap:"wrap"},
   leyendaItem:{display:"flex",alignItems:"center",gap:"6px",padding:"4px 10px",borderRadius:"20px",fontSize:"11px",fontWeight:500},
   dot:{width:8,height:8,borderRadius:"50%",flexShrink:0},
@@ -139,15 +144,5 @@ const styles = {
   maqBadge:{display:"inline-block",padding:"2px 8px",borderRadius:"20px",fontSize:"10px",fontWeight:600,marginBottom:"6px"},
   clienteLabel:{fontSize:"13px",fontWeight:600,color:"#1E293B",margin:"0 0 4px 0"},
   fechaLabel:{fontSize:"11px",color:"#94A3B8",margin:0},
-  modalOverlay:{position:"fixed",inset:0,backgroundColor:"rgba(0,0,0,0.4)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:100},
-  modal:{backgroundColor:"#fff",borderRadius:"12px",padding:"24px",width:"100%",maxWidth:"440px",boxShadow:"0 20px 40px rgba(0,0,0,0.15)"},
-  modalHeader:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"20px"},
-  modalTitle:{fontSize:"16px",fontWeight:700,color:"#1E293B",margin:0},
-  modalFooter:{display:"flex",justifyContent:"flex-end",gap:"10px",marginTop:"20px"},
-  formGrid:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"16px"},
-  label:{display:"block",fontSize:"11px",fontWeight:600,color:"#64748B",marginBottom:"6px",textTransform:"uppercase",letterSpacing:"0.04em"},
-  input:{width:"100%",padding:"9px 12px",border:"1px solid #E2E8F0",borderRadius:"6px",fontSize:"13px",boxSizing:"border-box",backgroundColor:"#F8FAFC"},
-  btnCancel:{padding:"8px 16px",backgroundColor:"transparent",border:"1px solid #E2E8F0",borderRadius:"6px",color:"#64748B",fontSize:"13px",cursor:"pointer"},
-  btnSave:{padding:"8px 20px",backgroundColor:"#4A6FA5",border:"none",borderRadius:"6px",color:"#fff",fontSize:"13px",fontWeight:600,cursor:"pointer"},
   iconBtn:{background:"none",border:"none",cursor:"pointer",padding:"4px",color:"#64748B"},
 }

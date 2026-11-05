@@ -18,16 +18,20 @@ import {
   X,
   ArrowLeftRight,
 } from "lucide-react"
+import path from "node:path"
+import { icon } from "leaflet"
 
 const navItems = [
   { label: "Dashboard",         icon: BarChart2,    path: "/maquinaria/dashboard" },
+  { label: "Facturación",       icon: FileText,     path: "/maquinaria/facturacion" },
   { label: "Maquinaria",        icon: Wrench,       path: "/maquinaria/maquinas" },
   { label: "Arriendos",         icon: FileText,     path: "/maquinaria/arriendos" },
-  { label: "Facturación",       icon: FileText,     path: "/maquinaria/facturacion" },
+  
   { label: "Clientes",          icon: Users,        path: "/maquinaria/clientes" },
   { label: "Servicios",         icon: Settings,     path: "/maquinaria/servicios" },
   { label: "Calendario",        icon: CalendarRange, path: "/maquinaria/calendario" },
   { label: "Datos Históricos",  icon: BarChart2,    path: "/maquinaria/historicos" },
+  { label: "Registros", icon: FileText, path : "/maquinaria/registrar"},
 ]
 
 export default function LayoutMaquinaria() {
@@ -54,6 +58,10 @@ export default function LayoutMaquinaria() {
             <span style={styles.logoText}>Maquinaria</span>
           )}
         </div>
+        {/* Collapse toggle */}
+        <button onClick={() => setCollapsed(!collapsed)} style={styles.collapseBtn}>
+          {collapsed ? <ChevronRight size={16} color="#6B89AF" /> : <Menu size={16} color="#6B89AF" />}
+        </button>
 
         {/* Nav items */}
         <nav style={styles.nav}>
@@ -82,10 +90,7 @@ export default function LayoutMaquinaria() {
           })}
         </nav>
 
-        {/* Collapse toggle */}
-        <button onClick={() => setCollapsed(!collapsed)} style={styles.collapseBtn}>
-          {collapsed ? <ChevronRight size={16} color="#6B89AF" /> : <Menu size={16} color="#6B89AF" />}
-        </button>
+        
       </aside>
 
       {/* ── Main ── */}

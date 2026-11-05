@@ -21,6 +21,7 @@ import VistaHistoricosMaquinaria from './pages/HistoricoMaquinaria'
 import RebanoPotreros from './pages/RebanoPotreros'
 import Sanidad from './pages/Sanidad'
 import Genealogia from './pages/Genealogia'
+import IngresoMaquinaria from './pages/IngresoMaquinaria'
 
 function App() {
   return (
@@ -46,6 +47,7 @@ function App() {
             <Route path="arriendos" element={<VistaArriendos />} />
             <Route path="facturacion" element={<VistaFacturacion />} />
             <Route path="calendario" element={<VistaCalendarioArriendo />} />
+            <Route path='registrar' element={<IngresoMaquinaria/>}/>
             
           </Route>
         </Route>

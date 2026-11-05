@@ -1,86 +1,106 @@
-import { useCallback, useState } from "react"
-import { Pencil, Trash2, Plus, Wrench } from "lucide-react"
-import { servicios as api, maquinas as maquinasApi } from "../services/maquinaria"
-import useCarga from "../lib/useCarga"
-import EstadoCarga from "../components/EstadoCarga"
-import ModalLecheria, { Campo } from "../components/ModalLecheria"
+import { useCallback, useMemo, useState } from "react"
+import { Wrench, Search, Clock, Map as MapIcon, TrendingUp } from "lucide-react"
+import { servicios as api, maquinas as maquinasApi, arriendos as arriendosApi } from "@/services/maquinaria"
+import useCarga from "@/lib/useCarga"
+import EstadoCarga from "@/components/EstadoCarga"
+import Scorecard from "@/components/maquinaria/Scorecard"
 import s, { AZUL } from "./EstilosMaquinaria"
 
-const vacio = { nombre: "", descripcion: "", unidad: "hectáreas", nota: "", maquinas: [] }
-
+// Vista de solo lectura. Ingreso y edición: /maquinaria/registrar?tipo=servicio (desde el menú "Registrar")
 export default function VistaServicios() {
   const cargarTodo = useCallback(async () => {
-    const [servicios, maquinas] = await Promise.all([api.listar(), maquinasApi.listar()])
-    return { servicios, maquinas }
+    const [servicios, maquinas, arriendos] = await Promise.all([api.listar(), maquinasApi.listar(), arriendosApi.listar()])
+    return { servicios, maquinas, arriendos }
   }, [])
-  const { datos, cargando, error, setError, recargar } = useCarga(cargarTodo, { servicios: [], maquinas: [] })
-  const { servicios, maquinas } = datos
+  const { datos, cargando, error, recargar } = useCarga(cargarTodo, { servicios: [], maquinas: [], arriendos: [] })
+  const { servicios, maquinas, arriendos } = datos
 
-  const [modal, setModal] = useState(null)
-  const [modalError, setModalError] = useState(null)
-  const [guardando, setGuardando] = useState(false)
+  const anio = String(new Date().getFullYear())
+  const [q, setQ] = useState("")
+  const [fUnidad, setFUnidad] = useState("")
+  const [fMaquina, setFMaquina] = useState("")
+  const [orden, setOrden] = useState("uso")
 
-  const campo = (k, v) => setModal((m) => ({ ...m, [k]: v }))
-  const toggleMaquina = (id) =>
-    setModal((m) => ({ ...m, maquinas: m.maquinas.includes(id) ? m.maquinas.filter((x) => x !== id) : [...m.maquinas, id] }))
   const nombreMaquina = (id) => {
     const m = maquinas.find((x) => x.id === id)
     return m ? `${m.nombre} ${m.modelo}` : `#${id}`
   }
 
-  const guardar = async () => {
-    if (!modal.nombre.trim()) return setModalError("El nombre es obligatorio")
-    const payload = {
-      nombre: modal.nombre.trim(),
-      descripcion: modal.descripcion.trim(),
-      unidad: modal.unidad,
-      nota: modal.nota.trim(),
-      maquinas: modal.maquinas,
+  // Veces que se pidió cada servicio en el año y cantidad trabajada
+  const uso = useMemo(() => {
+    const r = {}
+    for (const a of arriendos) {
+      if (!a.inicio?.startsWith(anio)) continue
+      const u = (r[a.servicio_id] ??= { n: 0, cantidad: 0 })
+      u.n += 1
+      u.cantidad += Number(a.cantidad) || 0
     }
-    try {
-      setGuardando(true)
-      setModalError(null)
-      if (modal.id) await api.actualizar(modal.id, payload)
-      else await api.crear(payload)
-      setModal(null)
-      await recargar()
-    } catch (e) {
-      setModalError(e.message)
-    } finally {
-      setGuardando(false)
-    }
-  }
+    return r
+  }, [arriendos, anio])
 
-  const eliminar = async (sv) => {
-    if (!window.confirm(`¿Eliminar el servicio "${sv.nombre}"?`)) return
-    try { await api.eliminar(sv.id); await recargar() } catch (e) { setError(e.message) }
-  }
+  const filtrados = useMemo(() => {
+    const t = q.trim().toLowerCase()
+    const r = servicios.filter(
+      (sv) =>
+        (!fUnidad || sv.unidad === fUnidad) &&
+        (!fMaquina || sv.maquinas.some((id) => String(id) === fMaquina)) &&
+        (!t || `${sv.nombre} ${sv.descripcion ?? ""}`.toLowerCase().includes(t))
+    )
+    return [...r].sort((a, b) => (orden === "uso" ? (uso[b.id]?.n ?? 0) - (uso[a.id]?.n ?? 0) : a.nombre.localeCompare(b.nombre)))
+  }, [servicios, q, fUnidad, fMaquina, orden, uso])
+
+  const masPedido = servicios.reduce((top, sv) => ((uso[sv.id]?.n ?? 0) > (uso[top?.id]?.n ?? 0) ? sv : top), null)
+  const sinMaquina = servicios.filter((sv) => sv.maquinas.length === 0).length
 
   return (
     <div style={s.container}>
       <div style={s.topBar}>
         <div>
           <h2 style={s.title}>Tipos de Servicio</h2>
-          <p style={s.sub}>{servicios.length} servicios disponibles</p>
+          <p style={s.sub}>{filtrados.length} de {servicios.length} servicios</p>
         </div>
-        <button style={s.btnAdd} onClick={() => { setModalError(null); setModal({ ...vacio }) }}>
-          <Plus size={15} /> Agregar servicio
-        </button>
+      </div>
+
+      <div style={s.statsRow}>
+        <Scorecard icono={Wrench} color="#4A6FA5" bg="#EBF2FB" valor={servicios.length} etiqueta="Servicios ofrecidos"
+          detalle={sinMaquina ? `${sinMaquina} sin máquina asignada` : "todos con máquina asignada"} />
+        <Scorecard icono={MapIcon} color="#065F46" bg="#D1FAE5" valor={servicios.filter((sv) => sv.unidad !== "horas").length} etiqueta="Por hectárea" />
+        <Scorecard icono={Clock} color="#92400E" bg="#FEF3C7" valor={servicios.filter((sv) => sv.unidad === "horas").length} etiqueta="Por hora" />
+        <Scorecard icono={TrendingUp} color="#7C3AED" bg="#EDE9FE"
+          valor={masPedido && uso[masPedido.id] ? masPedido.nombre : "—"}
+          etiqueta={`Más pedido en ${anio}`}
+          detalle={masPedido && uso[masPedido.id] ? `${uso[masPedido.id].n} arriendos` : null} />
+      </div>
+
+      <div style={s.filtros}>
+        <div style={s.buscador}>
+          <Search size={14} color="#94A3B8" />
+          <input style={s.buscadorInput} placeholder="Buscar servicio..." value={q} onChange={(e) => setQ(e.target.value)} />
+        </div>
+        <select style={s.select} value={fUnidad} onChange={(e) => setFUnidad(e.target.value)}>
+          <option value="">Todas las unidades</option>
+          <option value="hectáreas">Por hectárea</option>
+          <option value="horas">Por hora</option>
+        </select>
+        <select style={s.select} value={fMaquina} onChange={(e) => setFMaquina(e.target.value)}>
+          <option value="">Cualquier máquina</option>
+          {maquinas.map((m) => <option key={m.id} value={m.id}>{m.nombre} {m.modelo}</option>)}
+        </select>
+        <select style={s.select} value={orden} onChange={(e) => setOrden(e.target.value)}>
+          <option value="uso">Ordenar: más pedidos</option>
+          <option value="nombre">Ordenar: nombre</option>
+        </select>
       </div>
 
       <EstadoCarga cargando={cargando} error={error} onReintentar={recargar} />
 
       {!cargando && !error && (
         <div style={s.cardsGrid}>
-          {servicios.map((sv) => (
+          {filtrados.map((sv) => (
             <div key={sv.id} style={s.card}>
               <div style={s.cardHead}>
                 <div style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: "#EBF2FB", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <Wrench size={16} color={AZUL} />
-                </div>
-                <div style={s.actions}>
-                  <button style={s.iconBtnBlue} title="Editar" onClick={() => { setModalError(null); setModal({ ...sv }) }}><Pencil size={13} /></button>
-                  <button style={s.iconBtnRed} title="Eliminar" onClick={() => eliminar(sv)}><Trash2 size={13} /></button>
                 </div>
               </div>
               <h3 style={s.cardTitle}>{sv.nombre}</h3>
@@ -91,45 +111,19 @@ export default function VistaServicios() {
                     {nombreMaquina(id)}
                   </span>
                 ))}
+                {sv.maquinas.length === 0 && <span style={{ ...s.badge, backgroundColor: "#FEF3C7", color: "#92400E" }}>Sin máquina asignada</span>}
               </div>
-              <p style={{ ...s.cardMeta, fontStyle: "italic" }}>Se cobra por {sv.unidad === "horas" ? "hora" : "hectárea"}{sv.nota ? ` · ${sv.nota}` : ""}</p>
+              <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid #F1F5F9", paddingTop: 8 }}>
+                <p style={s.cardMeta}>Se cobra por {sv.unidad === "horas" ? "hora" : "hectárea"}</p>
+                <p style={{ ...s.cardMeta, fontWeight: 600 }}>
+                  {uso[sv.id] ? `${uso[sv.id].n} arriendos · ${uso[sv.id].cantidad.toLocaleString("es-CL")} ${sv.unidad === "horas" ? "h" : "ha"} en ${anio}` : `Sin uso en ${anio}`}
+                </p>
+              </div>
+              {sv.nota && <p style={{ ...s.cardMeta, fontStyle: "italic" }}>{sv.nota}</p>}
             </div>
           ))}
-          {servicios.length === 0 && <p style={s.vacio}>Aún no hay servicios registrados.</p>}
+          {filtrados.length === 0 && <p style={s.vacio}>No hay servicios con esos filtros.</p>}
         </div>
-      )}
-
-      {modal && (
-        <ModalLecheria
-          titulo={modal.id ? "Editar servicio" : "Nuevo servicio"}
-          color={AZUL}
-          onClose={() => setModal(null)}
-          onSave={guardar}
-          error={modalError}
-          guardando={guardando}
-        >
-          <Campo label="Nombre del servicio" full><input style={s.input} value={modal.nombre} onChange={(e) => campo("nombre", e.target.value)} /></Campo>
-          <Campo label="Descripción" full>
-            <textarea style={{ ...s.input, height: 70, resize: "vertical" }} value={modal.descripcion} onChange={(e) => campo("descripcion", e.target.value)} />
-          </Campo>
-          <Campo label="Unidad de cobro">
-            <select style={s.input} value={modal.unidad} onChange={(e) => campo("unidad", e.target.value)}>
-              <option value="horas">horas</option>
-              <option value="hectáreas">hectáreas</option>
-            </select>
-          </Campo>
-          <Campo label="Nota de tarifa"><input style={s.input} value={modal.nota} onChange={(e) => campo("nota", e.target.value)} /></Campo>
-          <Campo label="Maquinaria que realiza este servicio" full>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: 8, backgroundColor: "#F8FAFC", borderRadius: 6, border: "1px solid #E2E8F0" }}>
-              {maquinas.map((m) => (
-                <label key={m.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#334155", cursor: "pointer" }}>
-                  <input type="checkbox" checked={modal.maquinas.includes(m.id)} onChange={() => toggleMaquina(m.id)} />
-                  {m.nombre} {m.modelo}
-                </label>
-              ))}
-            </div>
-          </Campo>
-        </ModalLecheria>
       )}
     </div>
   )
