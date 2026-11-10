@@ -168,9 +168,12 @@ const AYUDA = `<b>Comandos</b>
 /agenda [días] · calendario (por defecto 7 días)
 /stock · insumos bajo el mínimo
 /animal ARETE · ficha de un animal
+/facturas [n] · últimas facturas guardadas (por defecto 5)
 /desvincular · desconectar este chat
 
-Cada mañana te llega el resumen automáticamente.`
+📎 Para guardar una factura, envíame la foto o el PDF. Si quieres, escribe el N° o el proveedor en el pie de foto.
+
+Cada mañana a las 6:30 te llega el resumen automáticamente.`
 
 const NO_VINCULADO = `Este chat aún no está vinculado.\nEn la app toca <b>Conectar Telegram</b>, copia el código y escribe aquí:\n/vincular CODIGO`
 
@@ -237,7 +240,73 @@ async function manejar(sb: Sb, chatId: string, texto: string) {
     return enviar(chatId, (await fichaAnimal(sb, empresaId, resto[0])) ?? "No encontré un animal con ese arete.")
   }
 
+  if (cmd === "/facturas") {
+    const n = Math.min(Math.max(parseInt(resto[0] ?? "5") || 5, 1), 10)
+    return enviar(chatId, await listarFacturas(sb, empresaId, n))
+  }
+
   return enviar(chatId, "No reconozco ese comando.\n\n" + AYUDA)
+}
+
+// ── Facturas: el bot guarda fotos/PDF en Supabase Storage ───
+const LIMITE_BYTES = 15 * 1024 * 1024 // Telegram solo deja descargar hasta 20 MB
+const EXT: Record<string, string> = { "application/pdf": "pdf", "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" }
+
+// deno-lint-ignore no-explicit-any
+function archivoDe(msg: any) {
+  if (msg.document) {
+    return { fileId: msg.document.file_id as string, nombre: (msg.document.file_name ?? "factura") as string,
+      mime: (msg.document.mime_type ?? "") as string, tam: (msg.document.file_size ?? 0) as number }
+  }
+  if (msg.photo?.length) {
+    const f = msg.photo[msg.photo.length - 1] // la de mayor resolución
+    return { fileId: f.file_id as string, nombre: "foto.jpg", mime: "image/jpeg", tam: (f.file_size ?? 0) as number }
+  }
+  return null
+}
+
+async function guardarFactura(sb: Sb, chatId: string, a: NonNullable<ReturnType<typeof archivoDe>>, pie: string) {
+  const ctx = await contexto(sb, chatId)
+  if (!ctx) return enviar(chatId, NO_VINCULADO)
+  if (!ctx.areas.length) return enviar(chatId, "Tu usuario no tiene acceso a ningún módulo en esta empresa.")
+  if (!EXT[a.mime]) return enviar(chatId, "Solo puedo guardar facturas en PDF o imagen (JPG, PNG, WEBP).")
+  if (a.tam > LIMITE_BYTES) return enviar(chatId, "El archivo pesa más de 15 MB. Envíalo comprimido o como foto.")
+
+  const token = Deno.env.get("TELEGRAM_BOT_TOKEN")!
+  const info = await (await fetch(`https://api.telegram.org/bot${token}/getFile?file_id=${encodeURIComponent(a.fileId)}`)).json()
+  if (!info.ok) throw new Error("Telegram no entregó el archivo (getFile)")
+  const res = await fetch(`https://api.telegram.org/file/bot${token}/${info.result.file_path}`)
+  if (!res.ok) throw new Error("No se pudo descargar el archivo desde Telegram")
+  const bytes = new Uint8Array(await res.arrayBuffer())
+
+  const hoy = hoyChile()
+  const ruta = `${ctx.empresaId}/${hoy.slice(0, 4)}/${hoy.slice(5, 7)}/${crypto.randomUUID()}.${EXT[a.mime]}`
+  const { error: up } = await sb.storage.from("facturas").upload(ruta, bytes, { contentType: a.mime, upsert: false })
+  if (up) throw up
+  const { error: ins } = await sb.from("facturas_archivos").insert({
+    empresa_id: ctx.empresaId, subido_por: ctx.userId, ruta, nombre_original: a.nombre.slice(0, 200),
+    tipo_mime: a.mime, tamano: bytes.length, nota: pie.trim().slice(0, 300) || null, origen: "telegram",
+  })
+  if (ins) {
+    await sb.storage.from("facturas").remove([ruta]) // no dejamos archivos huérfanos
+    throw ins
+  }
+  return enviar(chatId, `✅ Factura guardada (${fmt(hoy)}).${pie.trim() ? "\nNota: " + esc(pie.trim().slice(0, 100)) : ""}\nVer las últimas: /facturas`)
+}
+
+async function listarFacturas(sb: Sb, emp: string, n: number) {
+  const { data, error } = await sb.from("facturas_archivos").select("ruta, nombre_original, nota, creado_en")
+    .eq("empresa_id", emp).order("creado_en", { ascending: false }).limit(n)
+  if (error) throw error
+  if (!data?.length) return "Aún no hay facturas guardadas. Envíame una foto o un PDF."
+  const lineas: string[] = []
+  for (const f of data) {
+    const { data: firmada } = await sb.storage.from("facturas").createSignedUrl(f.ruta, 3600) // enlace válido 1 hora
+    const dia = f.creado_en.slice(0, 10)
+    const etiqueta = esc(f.nota || f.nombre_original || "factura")
+    lineas.push(firmada?.signedUrl ? `• ${fmt(dia)} · <a href="${esc(firmada.signedUrl)}">${etiqueta}</a>` : `• ${fmt(dia)} · ${etiqueta}`)
+  }
+  return "<b>🧾 Últimas facturas</b> (los enlaces duran 1 hora)\n" + lineas.join("\n")
 }
 
 // ── Webhook de Telegram ─────────────────────────────────────
@@ -246,19 +315,21 @@ async function webhook(req: Request) {
   try {
     const update = await req.json()
     const msg = update.message
-    if (!msg?.text || msg.chat?.type !== "private") return ok // solo chats privados
+    const archivo = msg ? archivoDe(msg) : null
+    if ((!msg?.text && !archivo) || msg.chat?.type !== "private") return ok // solo chats privados
     const sb = admin()
     const chatId = String(msg.chat.id)
     const mensajeId = String(update.update_id)
 
     // evita procesar dos veces el mismo mensaje (reintentos de Telegram)
     const { error: dup } = await sb.from("mensajes_bot").insert({
-      plataforma: "telegram", mensaje_id: mensajeId, chat_id: chatId, contenido: msg.text.slice(0, 500),
+      plataforma: "telegram", mensaje_id: mensajeId, chat_id: chatId, contenido: (msg.text ?? msg.caption ?? "[archivo]").slice(0, 500),
     })
     if (dup?.code === "23505") return ok
 
     try {
-      await manejar(sb, chatId, msg.text)
+      if (archivo) await guardarFactura(sb, chatId, archivo, msg.caption ?? "")
+      else await manejar(sb, chatId, msg.text)
       await sb.from("mensajes_bot").update({ estado: "procesado" }).eq("plataforma", "telegram").eq("mensaje_id", mensajeId)
     } catch (e) {
       console.error(e)
@@ -273,6 +344,11 @@ async function webhook(req: Request) {
 }
 
 // ── Resumen diario (lo llama pg_cron) ───────────────────────
+// Chile cambia de horario (UTC-3 verano / UTC-4 invierno). pg_cron trabaja en UTC, así que el job corre
+// a las 09:30 y 10:30 UTC y solo se envía cuando en Santiago son las 6:xx → siempre llega a las 6:30.
+const horaChile = () =>
+  Number(new Intl.DateTimeFormat("en-GB", { timeZone: "America/Santiago", hour: "2-digit", hour12: false }).format(new Date())) % 24
+
 async function resumenDiario() {
   const sb = admin()
   const { data: vs, error } = await sb.from("vinculos_mensajeria").select("user_id, empresa_id, chat_id, perfiles(activo)")
@@ -308,7 +384,11 @@ async function resumenDiario() {
 Deno.serve((req) => {
   const cron = Deno.env.get("CRON_SECRET")
   const hook = Deno.env.get("TELEGRAM_WEBHOOK_SECRET")
-  if (cron && req.headers.get("authorization") === `Bearer ${cron}`) return resumenDiario()
+  if (cron && req.headers.get("authorization") === `Bearer ${cron}`) {
+    const forzar = new URL(req.url).searchParams.get("forzar") === "1" // para probar a mano: ...?forzar=1
+    if (!forzar && horaChile() !== 6) return Response.json({ omitido: true, horaChile: horaChile() })
+    return resumenDiario()
+  }
   if (hook && req.headers.get("x-telegram-bot-api-secret-token") === hook) return webhook(req)
   return new Response("forbidden", { status: 403 })
 })
