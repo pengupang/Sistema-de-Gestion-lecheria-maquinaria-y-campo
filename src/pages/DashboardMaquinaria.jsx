@@ -21,9 +21,10 @@ export default function DashboardMaquinaria() {
     <div style={styles.container}>
       <p style={styles.fecha}>{hoyLargo()}</p>
       <EstadoCarga cargando={cargando} error={error} onReintentar={recargar} />
-
+      
       {r && (<>
       {/* Stats */}
+      <div className=" grid-rows-1">
       <div style={styles.grid}>
         {stats.map(({ label, value, icon: Icon, color, bg, sub }) => (
           <div key={label} style={styles.card}>
@@ -37,9 +38,12 @@ export default function DashboardMaquinaria() {
             </div>
           </div>
         ))}
+        </div>
       </div>
+      
 
       {/* Arriendos recientes */}
+      <div className="columns-2 p-6 md:p-8 bg-slate-100 min-h-screen">
       <div style={styles.tableCard}>
         <h3 style={styles.tableTitle}>Arriendos recientes</h3>
         <table style={styles.table}>
@@ -93,6 +97,7 @@ export default function DashboardMaquinaria() {
             {r.proximasMantenciones.length === 0 && <tr><td colSpan={4} style={{ ...styles.td, textAlign: "center", color: "#94A3B8" }}>No hay mantenciones programadas.</td></tr>}
           </tbody>
         </table>
+      </div>
       </div>
       </>)}
     </div>
@@ -154,7 +159,7 @@ const styles = {
   tableCard: {
     backgroundColor: "#ffffff",
     borderRadius: "10px",
-    padding: "20px",
+    padding: "15px",
     border: "1px solid #E2E8F0",
     boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
   },
@@ -165,7 +170,7 @@ const styles = {
     margin: "0 0 16px 0",
   },
   table: {
-    width: "100%",
+    width: "w-auto",
     borderCollapse: "collapse",
   },
   th: {
@@ -179,7 +184,7 @@ const styles = {
     letterSpacing: "0.05em",
   },
   td: {
-    padding: "10px 12px",
+    padding: "10px 5px",
     fontSize: "13px",
     color: "#334155",
     borderBottom: "1px solid #F1F5F9",

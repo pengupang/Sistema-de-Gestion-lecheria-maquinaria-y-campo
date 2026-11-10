@@ -15,6 +15,7 @@ const PALETA = [
   { color:"#BE185D", bg:"#FCE7F3" },
 ]
 const MANTENCION = { color:"#991B1B", bg:"#FEE2E2" }
+const FALLA = { color:"#C2410C", bg:"#FFEDD5" }
 
 const DIAS = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"]
 const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
@@ -26,6 +27,7 @@ export default function VistaCalendarioArriendo() {
   const [viewDate, setViewDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1))
   const [selectedDay, setSelectedDay] = useState(null)
   const [fMaquina, setFMaquina] = useState("")
+  const [fOrigen, setFOrigen] = useState("")
 
   const anio = viewDate.getFullYear()
   const mes = viewDate.getMonth()
@@ -36,10 +38,17 @@ export default function VistaCalendarioArriendo() {
 
   // Eventos (arriendos + mantenciones) que tocan el mes visible; se recarga al cambiar de mes
   const { datos: todos, cargando, error, recargar } = useCarga(() => calendario(desde, hasta), [], desde)
-  const eventos = fMaquina ? todos.filter((e) => String(e.maquina_id) === fMaquina) : todos
+  const eventos = todos.filter((e) =>
+  (!fMaquina || String(e.maquina_id) === fMaquina) &&
+  (!fOrigen || e.origen === fOrigen)
+)
   const { datos: maquinas } = useCarga(maquinasApi.listar, [])
 
-  const colorDe = (e) => (e.origen === "mantencion" ? MANTENCION : PALETA[Math.max(0, maquinas.findIndex((m) => m.id === e.maquina_id)) % PALETA.length])
+  const colorDe = (e) => {
+  if (e.origen === "mantencion") return MANTENCION
+  if (e.origen === "falla") return FALLA
+  return PALETA[Math.max(0, maquinas.findIndex((m) => m.id === e.maquina_id)) % PALETA.length]
+}
 
   const eventosDia = (day) => {
     const d = iso(anio, mes, day)
@@ -49,12 +58,13 @@ export default function VistaCalendarioArriendo() {
   const nextMonth = () => { setSelectedDay(null); setViewDate(new Date(anio, mes + 1, 1)) }
 
   const panel = selectedDay ? eventosDia(selectedDay) : eventos
-  const nArriendos = eventos.filter((e) => e.origen === "arriendo").length
+  const contar = (o) => eventos.filter((e) => e.origen === o).length
+  
 
   return (
     <div style={styles.container}>
       <div style={styles.topBar}>
-        <div><h2 style={styles.title}>Calendario de Arriendos</h2><p style={styles.sub}>{nArriendos} arriendos y {eventos.length - nArriendos} mantenciones en {MESES[mes].toLowerCase()} {anio}</p></div>
+        <div><h2 style={styles.title}>Calendario de Maquinarias</h2><p style={styles.sub}>{contar("arriendo")} arriendos , {contar("mantencion")} mantenciones y {contar("falla")} fallas en {MESES[mes].toLowerCase()} {anio}</p></div>
       </div>
 
       {/* Leyenda */}
@@ -62,9 +72,20 @@ export default function VistaCalendarioArriendo() {
         {maquinas.map((m, i)=>(
           <span key={m.id} onClick={()=>setFMaquina(f => f === String(m.id) ? "" : String(m.id))} title="Filtrar por esta máquina"
             style={{...styles.leyendaItem,cursor:"pointer",opacity:fMaquina && fMaquina !== String(m.id) ? 0.35 : 1,backgroundColor:PALETA[i % PALETA.length].bg,color:PALETA[i % PALETA.length].color}}><span style={{...styles.dot,backgroundColor:PALETA[i % PALETA.length].color}}/>{m.nombre} {m.modelo}</span>
+            
         ))}
-        <span style={{...styles.leyendaItem,backgroundColor:MANTENCION.bg,color:MANTENCION.color}}><span style={{...styles.dot,backgroundColor:MANTENCION.color}}/>Mantención</span>
-        {fMaquina && <button onClick={()=>setFMaquina("")} style={{...styles.leyendaItem,border:"1px solid #E2E8F0",background:"#fff",color:"#64748B",cursor:"pointer"}}>Ver todas</button>}
+
+        <span onClick={() => setFOrigen((f) => (f === "mantencion" ? "" : "mantencion"))} title="Ver solo mantenciones"
+          style={{ ...styles.leyendaItem, cursor: "pointer", opacity: fOrigen && fOrigen !== "mantencion" ? 0.35 : 1,backgroundColor: MANTENCION.bg, color: MANTENCION.color }}>
+          <span style={{ ...styles.dot, backgroundColor: MANTENCION.color }} />Mantención</span>
+
+          <span onClick={() => setFOrigen((f) => (f === "falla" ? "" : "falla"))} title="Ver solo fallas"
+          style={{ ...styles.leyendaItem, cursor: "pointer", opacity: fOrigen && fOrigen !== "falla" ? 0.35 : 1,
+                  backgroundColor: FALLA.bg, color: FALLA.color }}>
+          <span style={{ ...styles.dot, backgroundColor: FALLA.color }} />Fallas
+        </span>
+        {(fMaquina || fOrigen) && <button onClick={() => { setFMaquina(""); setFOrigen("") }} style={{...styles.leyendaItem,border:"1px solid #E2E8F0",background:"#fff",color:"#64748B",cursor:"pointer"}}>Ver todas</button>}
+        
       </div>
 
       <EstadoCarga cargando={false} error={error} onReintentar={recargar} />
@@ -101,11 +122,11 @@ export default function VistaCalendarioArriendo() {
         <div style={styles.sidePanel}>
           <h3 style={styles.sidePanelTitle}>{selectedDay ? `${selectedDay} de ${MESES[mes]}` : `Todo ${MESES[mes].toLowerCase()}`}</h3>
           {panel.length === 0
-            ? <p style={styles.noEventos}>Sin arriendos ni mantenciones</p>
+            ? <p style={styles.noEventos}>Sin arriendos, mantenciones ni fallas</p>
             : panel.map(e=>(
               <div key={`${e.origen}${e.id}`} style={styles.eventoCard}>
                 <div style={{...styles.maqBadge,backgroundColor:colorDe(e).bg,color:colorDe(e).color}}>{e.maquina}</div>
-                <p style={styles.clienteLabel}>{e.origen === "mantencion" ? `🔧 ${e.titulo}` : `${e.cliente} · ${e.titulo}`}</p>
+                <p style={styles.clienteLabel}> {e.origen === "mantencion" ? `🔧 ${e.titulo}` : e.origen === "falla" ? `⚠️ ${e.titulo}` : `${e.cliente} · ${e.titulo}`}</p>
                 <p style={styles.fechaLabel}>{fechaCL(e.inicio)}{e.fin !== e.inicio ? ` → ${fechaCL(e.fin)}` : ""} · {e.estado}</p>
               </div>
             ))

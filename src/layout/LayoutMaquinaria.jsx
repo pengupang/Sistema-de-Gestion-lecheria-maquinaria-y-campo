@@ -48,20 +48,20 @@ export default function LayoutMaquinaria() {
   return (
     <div style={styles.root}>
       {/* ── Sidebar ── */}
-      <aside style={{ ...styles.sidebar, width: collapsed ? 64 : 240 }}>
+      <aside style={{ ...styles.sidebar, width: collapsed ? 68 : 240 }}>
         {/* Logo */}
         <div style={styles.sidebarHeader}>
           <div style={styles.logoIcon}>
-            <Wrench size={18} color="#ffffff" />
+          <button onClick={() => setCollapsed(!collapsed)} style={styles.collapseBtn}>
+           {collapsed ?  <Menu size={18} color="#ffffff" />: < Wrench size={16} color="#6B89AF" />}
+          </button>
           </div>
           {!collapsed && (
             <span style={styles.logoText}>Maquinaria</span>
           )}
         </div>
-        {/* Collapse toggle */}
-        <button onClick={() => setCollapsed(!collapsed)} style={styles.collapseBtn}>
-          {collapsed ? <ChevronRight size={16} color="#6B89AF" /> : <Menu size={16} color="#6B89AF" />}
-        </button>
+        
+        
 
         {/* Nav items */}
         <nav style={styles.nav}>
