@@ -35,5 +35,5 @@ export default function useCarga(fn, inicial = null, clave = "") {
     }
   }, [])
 
-  return { datos, setDatos, cargando, error, setError, recargar }
+  return { datos, setDatos, cargando, error, setError, recargar}
 }

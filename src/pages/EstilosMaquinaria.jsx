@@ -28,3 +28,12 @@ const m = {
   rutTxt: { display: "block", fontSize: "11px", color: "#94A3B8" },
 }
 export default m
+
+export const CATEGORIA_FALLA = ["Motor", "Hidráulico", "Eléctrico", "Neumáticos", "Otro"]
+
+export const TIPO_MANTENCION = ["Preventiva", "Correctiva"]
+export const ESTADO_MANTENCION = {
+  Programada: { backgroundColor: "#DBEAFE", color: "#1E40AF" },
+  "En curso": { backgroundColor: "#FEF3C7", color: "#92400E" },
+  Realizada: { backgroundColor: "#D1FAE5", color: "#065F46" },
+}

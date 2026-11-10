@@ -200,3 +200,17 @@ export async function catalogos() {
   ])
   return { clientes: cl, maquinas: mq, servicios: sv }
 }
+
+//____________Falllas________
+export const fallas = crud("fallas_maquinas", {
+  select: "*, maquina:maquinas(nombre,modelo),arriendo:arriendos(inicio,fin,cliente:clientes_maquinaria(nombre))",
+  orden: "inicio",
+  ascendente: false,
+})
+
+//______Mantenciones________
+export const mantenciones_maquinas = crud("mantenciones",{
+  select: "*, maquina:maquinas(nombre,modelo)",
+  orden:"inicio",
+  ascendente: false,
+})
