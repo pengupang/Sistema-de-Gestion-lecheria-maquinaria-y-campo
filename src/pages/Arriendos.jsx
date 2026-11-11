@@ -6,6 +6,7 @@ import { clp, fechaCL } from "@/lib/formato"
 import EstadoCarga from "@/components/EstadoCarga"
 import Scorecard from "@/components/maquinaria/Scorecard"
 import s, { ESTADO_ARRIENDO } from "./EstilosMaquinaria"
+import { descargarCSV } from "@/lib/exportar"
 
 const POR_PAGINA = 100
 
@@ -57,6 +58,23 @@ export default function VistaArriendos() {
           <h2 style={s.title}>Arriendos</h2>
           <p style={s.sub}>{filtrados.length} registros{fAnio ? ` en ${fAnio}` : ""}</p>
         </div>
+        <button
+                  style={s.btnCancel}
+                  onClick={() =>
+                    descargarCSV(`arriendos-${fAnio || "todos"}`, [
+                      { titulo: "Cliente", valor: (a) => a.cliente?.nombre },
+                      { titulo: "Máquina", valor: (a) => `${a.maquina?.nombre ?? ""} ${a.maquina?.modelo ?? ""}` },
+                      { titulo: "Servicio", valor: (a) => a.servicio?.nombre },
+                      { titulo: "Inicio", valor: (a) => fechaCL(a.inicio) },
+                      { titulo: "Término", valor: (a) => fechaCL(a.fin) },
+                      { titulo: "Monto", valor: (a) => a.monto },
+                      { titulo: "Pagado", valor: (a) => (a.pagado ? "Sí" : "No") },
+                      { titulo: "Estado", valor: (a) => a.estado },
+                    ], filtrados)
+                  }
+                >
+            Exportar a Excel
+          </button>
       </div>
 
       <div style={s.statsRow}>

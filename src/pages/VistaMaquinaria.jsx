@@ -6,6 +6,7 @@ import { clp, fechaCL, aInputLocal, horasFalla} from "@/lib/formato"
 import EstadoCarga from "@/components/EstadoCarga"
 import Scorecard from "@/components/maquinaria/Scorecard"
 import s, { ESTADO_MAQUINA } from "./EstilosMaquinaria"
+import { descargarCSV } from "@/lib/exportar"
 
 // Vista de solo lectura. Ingreso y edición: /maquinaria/registrar?tipo=maquina (desde el menú "Registrar")
 export default function VistaMaquinaria() {
@@ -76,9 +77,27 @@ const masFallas = maquinas.reduce(
     <div style={s.container}>
       <div style={s.topBar}>
         <div>
-          <h2 style={s.title}>Equipos</h2>
+          <h2 style={s.title}>Maquinaria</h2>
           <p style={s.sub}>{filtradas.length} de {maquinas.length} equipos</p>
         </div>
+        <button
+  style={s.btnCancel}
+  onClick={() =>
+    descargarCSV(`equipos-${desde}-a-${hasta}`, [
+      { titulo: "Nombre", valor: (m) => m.nombre },
+      { titulo: "Modelo", valor: (m) => m.modelo },
+      { titulo: "Tipo", valor: (m) => m.tipo },
+      { titulo: "Estado actual", valor: (m) => m.estado },
+      { titulo: "Arriendos en el período", valor: (m) => uso[m.id]?.n ?? 0 },
+      { titulo: "Ingresos en el período", valor: (m) => uso[m.id]?.monto ?? 0 },
+      { titulo: "Último uso", valor: (m) => (uso[m.id]?.ultimo ? fechaCL(uso[m.id].ultimo) : "") },
+      { titulo: "Fallas en el período", valor: (m) => fallasPorMaquina[m.id]?.n ?? 0 },
+      { titulo: "Horas detenidas", valor: (m) => Math.round(fallasPorMaquina[m.id]?.horas ?? 0) },
+    ], filtradas)
+  }
+>
+  Exportar a Excel
+</button>
       </div>
 
       <div style={{...s.statsRow, gridTemplateColumns:"repeat(3, minmax(0, 1fr))"}}>

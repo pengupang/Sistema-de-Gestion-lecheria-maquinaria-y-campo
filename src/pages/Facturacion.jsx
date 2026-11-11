@@ -5,7 +5,8 @@ import { facturas as api } from "../services/maquinaria"
 import useCarga from "../lib/useCarga"
 import { clp, fechaCL, MESES_CORTO } from "../lib/formato"
 import EstadoCarga from "../components/EstadoCarga"
-import { ESTADO_FACTURA } from "./EstilosMaquinaria"
+import s,{ ESTADO_FACTURA } from "./EstilosMaquinaria"
+import { descargarCSV } from "@/lib/exportar"
 
 const POR_PAGINA = 100
 const nombreMaq = (f) => `${f.arriendo?.maquina?.nombre ?? ""} ${f.arriendo?.maquina?.modelo ?? ""}`.trim()
@@ -70,6 +71,23 @@ export default function VistaFacturacion() {
     <div style={styles.container}>
       <div style={styles.topBar}>
         <div><h2 style={styles.title}>Facturación e Inteligencia de Negocio</h2><p style={styles.sub}>Resumen financiero del año {anio} · montos netos (sin IVA) salvo donde se indica</p></div>
+        <button
+  style={s.btnCancel}
+  onClick={() =>
+    descargarCSV(`facturas-${anio}`, [
+      { titulo: "N° factura", valor: (f) => f.numero },
+      { titulo: "Fecha emisión", valor: (f) => fechaCL(f.fecha_emision) },
+      { titulo: "Cliente", valor: (f) => f.cliente?.nombre },
+      { titulo: "Máquina", valor: (f) => nombreMaq(f) },
+      { titulo: "Servicio", valor: (f) => f.arriendo?.servicio?.nombre },
+      { titulo: "Neto", valor: (f) => f.neto },
+      { titulo: "Total (con IVA)", valor: (f) => f.total },
+      { titulo: "Estado", valor: (f) => f.estado },
+    ], registrosFiltrados)
+  }
+>
+  Exportar a Excel
+</button>
         <select style={styles.select} value={anio} onChange={(e) => { setAnio(e.target.value); setLimite(POR_PAGINA) }}>
           {anios.map((a) => <option key={a} value={a}>{a}</option>)}
         </select>
