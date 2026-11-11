@@ -2,6 +2,7 @@ import { useMemo, useState } from "react"
 import { arriendos as api } from "@/services/maquinaria"
 import TarjetaFormulario, { Campo } from "@/components/TarjetaFormulario"
 import s, { AZUL, ESTADO_ARRIENDO } from "@/pages/EstilosMaquinaria"
+import { fechaCL } from "@/lib/formato"
 
 const hoy = () => new Date().toISOString().slice(0, 10)
 const vacio = () => ({
@@ -14,7 +15,7 @@ const vacio = () => ({
 // y queda guardado al registrarlo.
 // catalogo: { clientes, maquinas, servicios } (lo carga la página con catalogos())
 export default function FormArriendo({ inicial, catalogo, onGuardado, onCancel }) {
-  const { clientes = [], maquinas = [], servicios = [] } = catalogo ?? {}
+  const { clientes = [], maquinas = [], servicios = [], arriendos = [] } = catalogo ?? {}
   const [form, setForm] = useState({ ...vacio(), ...inicial, monto: inicial?.monto ?? "" })
   const [error, setError] = useState(null)
   const [guardando, setGuardando] = useState(false)
@@ -38,12 +39,23 @@ export default function FormArriendo({ inicial, catalogo, onGuardado, onCancel }
     return sv?.maquinas?.length ? maquinas.filter((m) => sv.maquinas.some((id) => String(id) === String(m.id))) : maquinas
   }, [servicios, maquinas, form.servicio_id])
 
+  // Busca otro arriendo de la misma máquina cuyas fechas se crucen con las elegidas
+  const choque = useMemo(() => {
+    if (!form.maquina_id || !form.inicio || !form.fin) return null
+    return arriendos.find((a) =>
+      String(a.maquina_id) === String(form.maquina_id) && // misma máquina
+      String(a.id) !== String(form.id) &&                 // que no sea el mismo arriendo (al editar)
+      a.inicio <= form.fin && a.fin >= form.inicio        // las fechas se cruzan
+    ) ?? null
+}, [arriendos, form.maquina_id, form.inicio, form.fin, form.id])
+
   const guardar = async () => {
     if (!form.cliente_id) return setError("Selecciona un cliente")
     if (!form.servicio_id) return setError("Selecciona un servicio")
     if (!form.maquina_id) return setError("Selecciona una máquina")
     if (!form.inicio || !form.fin) return setError("Indica las fechas")
     if (form.fin < form.inicio) return setError("La fecha de término no puede ser anterior al inicio")
+    if (choque) return setError("La máquina ya tiene un arriendo en esas fechas. Cambia las fechas o elige otra máquina.")
     if (!(Number(form.cantidad) > 0)) return setError("La cantidad debe ser mayor a 0")
     if (form.monto === "" || !(Number(form.monto) > 0)) return setError("Ingresa el monto acordado con el cliente")
 
@@ -111,6 +123,13 @@ export default function FormArriendo({ inicial, catalogo, onGuardado, onCancel }
       </Campo>
       <Campo label="Inicio"><input style={s.input} type="date" value={form.inicio} onChange={(e) => campo("inicio", e.target.value)} /></Campo>
       <Campo label="Término"><input style={s.input} type="date" value={form.fin} min={form.inicio} onChange={(e) => campo("fin", e.target.value)} /></Campo>
+      {choque && (
+      <Campo label="" full>
+        <div style={s.errorBox}>
+          Esta máquina ya está arrendada a {choque.cliente?.nombre} del {fechaCL(choque.inicio)} al {fechaCL(choque.fin)}.
+        </div>
+      </Campo>
+)}
       <Campo label={`Cantidad (${form.unidad})`}><input style={s.input} type="number" min="0" step="0.5" value={form.cantidad} onChange={(e) => campo("cantidad", e.target.value)} /></Campo>
       <Campo label="Estado">
         <select style={s.input} value={form.estado} onChange={(e) => campo("estado", e.target.value)}>
