@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react"
 import { Outlet, useNavigate, useLocation } from "react-router-dom"
-import { LogOut, ChevronRight, Menu, X, ArrowLeftRight } from "lucide-react"
+import { LogOut, ChevronRight, Menu, X, ArrowLeftRight, Building2 } from "lucide-react"
 import { supabase } from "../lib/supabase"
 import { useAuth } from "../context/AuthContext"
-import SelectorEmpresa from "../components/SelectorEmpresa"
 import VincularTelegram from "../components/VincularTelegram"
 import { destinoPorRol } from "../lib/roles"
 
@@ -19,11 +18,12 @@ const botonHeader =
   "flex items-center gap-1.5 rounded-md border border-slate-200 px-2.5 py-1.5 text-[13px] text-slate-500 transition-colors hover:bg-slate-50"
 
 export default function LayoutModulo({ modulo, nombre, Icono, navItems, tema, atajos }) {
-  const { perfil, contexto } = useAuth()
+  const { perfil, contexto, cambiarEmpresa } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [colapsada, setColapsada] = useState(() => window.innerWidth < 1024)
   const [abierta, setAbierta] = useState(false)
+  const [cambiando, setCambiando] = useState(false)
 
   useEffect(() => setAbierta(false), [location.pathname]) // al navegar, cierra el panel en celular
 
@@ -34,6 +34,18 @@ export default function LayoutModulo({ modulo, nombre, Icono, navItems, tema, at
   // Cambio directo de área: solo para admin, y solo si la empresa activa tiene este módulo y otro más
   // (hoy, la empresa que maneja lechería y maquinaria). Va directo al otro módulo, sin el portal.
   const otroModulo = contexto?.esAdmin ? contexto.modulos.find((m) => m !== modulo && destinoPorRol[m]) : null
+  // El cambio de empresa / área vive en el menú lateral y SOLO existe para administradores.
+  // Un usuario común no ve nada de otras empresas: ni selector ni nombres.
+  const puedeCambiar = !!contexto && (contexto.esSuperadmin || contexto.esAdmin) && (contexto.empresas.length > 1 || !!otroModulo)
+  const onCambiarEmpresa = async (e) => {
+    setCambiando(true)
+    try {
+      await cambiarEmpresa(e.target.value)
+    } catch {
+      setCambiando(false)
+      alert("No se pudo cambiar de empresa")
+    }
+  }
   const titulo = navItems.find((i) => i.path === location.pathname)?.label ?? "Dashboard"
   const ocultoSiColapsada = colapsada ? "md:hidden" : "" // solo afecta a escritorio; en el panel del celular siempre hay texto
   // Atajos de la barra inferior en celular: los indicados por el módulo, o los 4 primeros del menú
@@ -61,7 +73,10 @@ export default function LayoutModulo({ modulo, nombre, Icono, navItems, tema, at
           <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg md:hidden ${tema.logo}`}>
             <Icono size={16} className="text-white" />
           </div>
-          <span className={`whitespace-nowrap text-[15px] font-bold text-white ${ocultoSiColapsada}`}>{nombre}</span>
+          <div className={`min-w-0 ${ocultoSiColapsada}`}>
+            <span className="block whitespace-nowrap text-[15px] font-bold text-white">{nombre}</span>
+            {contexto?.empresaNombre && <span className="block truncate text-[11px] text-white/60">{contexto.empresaNombre}</span>}
+          </div>
           <button onClick={() => setAbierta(false)} className="ml-auto text-white/70 md:hidden" title="Cerrar menú">
             <X size={18} />
           </button>
@@ -85,6 +100,38 @@ export default function LayoutModulo({ modulo, nombre, Icono, navItems, tema, at
             )
           })}
         </nav>
+
+        {puedeCambiar && (
+          <div className="border-t border-white/5 p-2">
+            {colapsada && (
+              <button onClick={() => setColapsada(false)} title="Cambiar de empresa o área"
+                className={`hidden w-full items-center justify-center rounded-md py-2 hover:bg-white/5 md:flex ${tema.texto}`}>
+                <Building2 size={18} className={tema.icono} />
+              </button>
+            )}
+            <div className={colapsada ? "md:hidden" : ""}>
+              <p className={`px-2.5 pb-1 text-[10.5px] font-semibold uppercase tracking-wider ${tema.icono}`}>Administración</p>
+              {contexto.empresas.length > 1 && (
+                <label className="flex items-center gap-2 rounded-md px-2.5 py-1.5" title="Cambiar de empresa">
+                  <Building2 size={16} className={`shrink-0 ${tema.icono}`} />
+                  <select value={contexto.empresaId} onChange={onCambiarEmpresa} disabled={cambiando}
+                    className="w-full min-w-0 cursor-pointer truncate bg-transparent text-[13px] text-white outline-none">
+                    {contexto.empresas.map((emp) => (
+                      <option key={emp.id} value={emp.id} className="text-slate-900">{emp.nombre}</option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              {otroModulo && (
+                <button onClick={() => navigate(destinoPorRol[otroModulo])}
+                  className={`flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left hover:bg-white/5 ${tema.texto}`}>
+                  <ArrowLeftRight size={16} className={`shrink-0 ${tema.icono}`} />
+                  <span className="whitespace-nowrap text-[13px] font-medium">Ir a {NOMBRE_MODULO[otroModulo] ?? otroModulo}</span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
@@ -93,16 +140,8 @@ export default function LayoutModulo({ modulo, nombre, Icono, navItems, tema, at
             <h2 className="truncate text-base font-semibold text-slate-800">{titulo}</h2>
           </div>
           <div className="flex shrink-0 items-center gap-2 md:gap-3">
-            <SelectorEmpresa />
             <VincularTelegram />
             <span className="hidden max-w-[200px] truncate text-[13px] font-medium text-slate-500 xl:inline">{perfil?.email ?? "Usuario"}</span>
-            {otroModulo && (
-              <button onClick={() => navigate(destinoPorRol[otroModulo])} className={botonHeader}
-                title={`Ir a ${NOMBRE_MODULO[otroModulo] ?? otroModulo}`}>
-                <ArrowLeftRight size={16} />
-                <span className="hidden lg:inline">Ir a {NOMBRE_MODULO[otroModulo] ?? otroModulo}</span>
-              </button>
-            )}
             <button onClick={handleLogout} className={botonHeader} title="Cerrar sesión">
               <LogOut size={16} />
               <span className="hidden lg:inline">Salir</span>

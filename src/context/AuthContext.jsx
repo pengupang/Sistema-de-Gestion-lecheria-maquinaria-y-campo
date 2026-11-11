@@ -45,11 +45,14 @@ export function AuthProvider({ children }) {
   }, [userId])
 
   // Cambia la empresa activa y recarga la app para que todo se vuelva a pedir
+  // Solo administradores pueden cambiar (la base de datos lo valida también)
   const cambiarEmpresa = useCallback(async (empresaId) => {
+    const c = datos.contexto
+    if (!c?.esAdmin && !c?.esSuperadmin) throw new Error("Sin permiso para cambiar de empresa")
     const { error } = await supabase.rpc("cambiar_empresa", { p_empresa: empresaId })
     if (error) throw error
     window.location.assign("/")
-  }, [])
+  }, [datos.contexto])
 
   const actual = userId && datos.userId === userId
   const perfil = actual ? datos.perfil : null
