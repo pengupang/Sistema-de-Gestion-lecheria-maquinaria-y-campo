@@ -61,9 +61,14 @@ export default function RebanoPotreros() {
           <h2 style={s.title}>Rebaño y Potreros</h2>
           <p style={s.sub}>{activos.length} animales activos · {potreros.length} potreros</p>
         </div>
-        <button style={s.btnAdd} onClick={() => registrar(tab === "animales" ? "animal" : "potrero")}>
-          <Plus size={15} /> {tab === "animales" ? "Registrar animal" : "Registrar potrero"}
-        </button>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {tab === "animales" && (
+            <button style={s.btnCancel} onClick={() => registrar("importar")}>Importar desde lector RFID</button>
+          )}
+          <button style={s.btnAdd} onClick={() => registrar(tab === "animales" ? "animal" : "potrero")}>
+            <Plus size={15} /> {tab === "animales" ? "Registrar animal" : "Registrar potrero"}
+          </button>
+        </div>
       </div>
 
       {error && <div style={s.errorBox}>{error}</div>}

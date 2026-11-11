@@ -13,7 +13,12 @@ export const hoyISO = () => fmt(new Date())
 // FK en la BD: animales.potrero_id -> ON DELETE SET NULL,
 //              sanidad_registros.animal_id -> ON DELETE CASCADE
 export const potreros = crud("potreros")
-export const animales = crud("animales")
+const baseAnimales = crud("animales")
+export const animales = {
+  ...baseAnimales,
+  // Inserta muchos de una vez (importación): si alguno falla, no se guarda ninguno
+  crearVarios: async (lista) => check(await supabase.from("animales").insert(lista).select("id")),
+}
 export const sanidad = crud("sanidad_registros")
 export const proveedores = crud("proveedores", { orden: "nombre" })
 export const insumos = crud("insumos", { orden: "nombre" })

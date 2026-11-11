@@ -23,7 +23,9 @@ export function descargarCSV(nombreArchivo, columnas, filas) {
 export function leerCSV(texto) {
   const t = texto.replace(/^\uFEFF/, "")
   const primera = t.split("\n")[0]
-  const sep = (primera.match(/;/g)?.length ?? 0) >= (primera.match(/,/g)?.length ?? 0) ? ";" : ","
+  // Separador: el que más aparezca en la primera línea (Excel en español usa ";", otros programas "," o tabulación)
+  const cuenta = (c) => primera.split(c).length - 1
+  const sep = [";", ",", "\t"].reduce((mejor, c) => (cuenta(c) > cuenta(mejor) ? c : mejor), ";")
 
   const filas = []
   let fila = [], celda = "", enComillas = false
