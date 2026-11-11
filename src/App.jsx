@@ -22,6 +22,7 @@ import RebanoPotreros from './pages/RebanoPotreros'
 import Sanidad from './pages/Sanidad'
 import Genealogia from './pages/Genealogia'
 import IngresoMaquinaria from './pages/IngresoMaquinaria'
+import IngresoLecheria from './pages/IngresoLecheria'
 
 function App() {
   return (
@@ -65,6 +66,7 @@ function App() {
             <Route path="rebano" element={<RebanoPotreros />} />
             <Route path="sanidad" element={<Sanidad />} />
             <Route path="genealogia" element={<Genealogia />} />
+            <Route path="registrar" element={<IngresoLecheria />} />
           </Route>
         </Route>
 

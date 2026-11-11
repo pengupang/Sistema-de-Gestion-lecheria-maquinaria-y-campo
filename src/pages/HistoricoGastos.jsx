@@ -1,27 +1,15 @@
 import { useCallback, useMemo, useState } from "react"
-import { Plus, X, TrendingUp, TrendingDown, DollarSign, ShoppingCart } from "lucide-react"
+import { useNavigate } from "react-router-dom"
+import { Plus, Pencil, TrendingUp, TrendingDown, DollarSign, ShoppingCart } from "lucide-react"
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts"
 import { gastos as api, proveedores as proveedoresApi } from "../services/lecheria"
 import useCarga from "../lib/useCarga"
 import { clp, fechaCL, MESES_CORTO as MESES } from "../lib/formato"
 import EstadoCarga from "../components/EstadoCarga"
-import ModalLecheria, { Campo } from "../components/ModalLecheria"
 import s from "./estilosLecheria"
 
-const categorias = ["Alimentación", "Veterinario", "Mantención", "Insumos", "Otros"]
-const categoriasColors = {
-  "Alimentación": "#3D6B4F",
-  "Veterinario":  "#3B82F6",
-  "Mantención":   "#F59E0B",
-  "Insumos":      "#8B5CF6",
-  "Otros":        "#94A3B8",
-}
+import { CATEGORIAS_GASTO as categorias, COLORES_GASTO as categoriasColors } from "./constantesLecheria"
 const POR_PAGINA = 100
-const hoyISO = () => {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
-}
-const emptyGasto = () => ({ fecha: hoyISO(), categoria: categorias[0], descripcion: "", monto: 0, proveedor_id: "", documento: "" })
 
 const sumarPor = (lista, clave) => {
   const acc = {}
@@ -29,21 +17,20 @@ const sumarPor = (lista, clave) => {
   return acc
 }
 
+// Vista de solo lectura. Crear, editar y eliminar: /lecheria/registrar?tipo=gasto
 export default function VistaHistoricosGastos() {
+  const navigate = useNavigate()
   const cargarTodo = useCallback(async () => {
     const [gastos, proveedores] = await Promise.all([api.listar(), proveedoresApi.listar()])
     return { gastos, proveedores }
   }, [])
-  const { datos, cargando, error, setError, recargar } = useCarga(cargarTodo, { gastos: [], proveedores: [] })
+  const { datos, cargando, error, recargar } = useCarga(cargarTodo, { gastos: [], proveedores: [] })
   const { gastos, proveedores } = datos
 
   const hoy = new Date()
   const [anio, setAnio] = useState(String(hoy.getFullYear())) // "todos" = todos los años
   const [filtroCategoria, setFiltroCategoria] = useState("Todos")
   const [limite, setLimite] = useState(POR_PAGINA)
-  const [modal, setModal] = useState(null)
-  const [modalError, setModalError] = useState(null)
-  const [guardando, setGuardando] = useState(false)
 
   const anios = useMemo(() => {
     const a = new Set(gastos.map((g) => g.fecha.slice(0, 4)))
@@ -79,38 +66,6 @@ export default function VistaHistoricosGastos() {
     [delPeriodo, filtroCategoria]
   )
 
-  const campo = (k, v) => setModal((m) => ({ ...m, [k]: v }))
-
-  const addGasto = async () => {
-    if (!modal.fecha) return setModalError("Indica la fecha")
-    if (!modal.descripcion.trim()) return setModalError("La descripción es obligatoria")
-    if (!(Number(modal.monto) >= 0)) return setModalError("El monto no puede ser negativo")
-    const payload = {
-      fecha: modal.fecha,
-      categoria: modal.categoria,
-      descripcion: modal.descripcion.trim(),
-      monto: Math.round(Number(modal.monto) || 0),
-      proveedor_id: modal.proveedor_id === "" ? null : Number(modal.proveedor_id),
-      documento: modal.documento.trim() || null,
-    }
-    try {
-      setGuardando(true)
-      setModalError(null)
-      await api.crear(payload)
-      setModal(null)
-      await recargar()
-    } catch (e) {
-      setModalError(e.message)
-    } finally {
-      setGuardando(false)
-    }
-  }
-
-  const deleteGasto = async (g) => {
-    if (!window.confirm(`¿Eliminar "${g.descripcion}" (${fechaCL(g.fecha)})?`)) return
-    try { await api.eliminar(g.id); await recargar() } catch (e) { setError(e.message) }
-  }
-
   return (
     <div style={styles.container}>
       <div style={styles.topBar}>
@@ -118,13 +73,13 @@ export default function VistaHistoricosGastos() {
           <h2 style={styles.title}>Histórico de Gastos</h2>
           <p style={styles.sub}>{delPeriodo.length.toLocaleString("es-CL")} registros · {anio === "todos" ? "todos los años" : anio}</p>
         </div>
-        <div style={{ display: "flex", gap: 10 }}>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <select style={s.select} value={anio} onChange={(e) => { setAnio(e.target.value); setLimite(POR_PAGINA) }}>
             <option value="todos">Todos los años</option>
             {anios.map((a) => <option key={a} value={a}>{a}</option>)}
           </select>
-          <button style={styles.btnAdd} onClick={() => { setModalError(null); setModal(emptyGasto()) }}>
-            <Plus size={15} /> Agregar gasto
+          <button style={styles.btnAdd} onClick={() => navigate("/lecheria/registrar?tipo=gasto")}>
+            <Plus size={15} /> Registrar gasto
           </button>
         </div>
       </div>
@@ -235,7 +190,7 @@ export default function VistaHistoricosGastos() {
                 <td style={styles.td}>{nombreProveedor(g.proveedor_id) ?? "—"}</td>
                 <td style={{ ...styles.td, fontWeight: 600 }}>{clp(g.monto)}</td>
                 <td style={styles.td}>
-                  <button style={styles.deleteBtn} title="Eliminar" onClick={() => deleteGasto(g)}><X size={14} /></button>
+                  <button style={styles.editBtn} title="Editar en Registrar" onClick={() => navigate(`/lecheria/registrar?tipo=gasto&id=${g.id}`)}><Pencil size={14} /></button>
                 </td>
               </tr>
             ))}
@@ -250,26 +205,6 @@ export default function VistaHistoricosGastos() {
       </div>
       </>)}
 
-      {/* Modal */}
-      {modal && (
-        <ModalLecheria titulo="Nuevo gasto" onClose={() => setModal(null)} onSave={addGasto} error={modalError} guardando={guardando}>
-          <Campo label="Fecha"><input style={s.input} type="date" value={modal.fecha} onChange={e => campo("fecha", e.target.value)} /></Campo>
-          <Campo label="Categoría">
-            <select style={s.input} value={modal.categoria} onChange={e => campo("categoria", e.target.value)}>
-              {categorias.map(c => <option key={c}>{c}</option>)}
-            </select>
-          </Campo>
-          <Campo label="Descripción" full><input style={s.input} value={modal.descripcion} onChange={e => campo("descripcion", e.target.value)} /></Campo>
-          <Campo label="Monto (CLP)"><input style={s.input} type="number" min="0" value={modal.monto} onChange={e => campo("monto", e.target.value)} /></Campo>
-          <Campo label="N° documento"><input style={s.input} value={modal.documento} onChange={e => campo("documento", e.target.value)} /></Campo>
-          <Campo label="Proveedor" full>
-            <select style={s.input} value={modal.proveedor_id} onChange={e => campo("proveedor_id", e.target.value)}>
-              <option value="">Sin proveedor</option>
-              {proveedores.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-            </select>
-          </Campo>
-        </ModalLecheria>
-      )}
     </div>
   )
 }
@@ -297,7 +232,7 @@ const styles = {
   th: { textAlign: "left", fontSize: "11px", fontWeight: 600, color: "#94A3B8", padding: "10px 16px", borderBottom: "1px solid #E2E8F0", textTransform: "uppercase", letterSpacing: "0.05em", backgroundColor: "#F8FAFC" },
   td: { padding: "11px 16px", fontSize: "13px", color: "#334155", borderBottom: "1px solid #F1F5F9" },
   catBadge: { padding: "3px 10px", borderRadius: "20px", fontSize: "12px", fontWeight: 500 },
-  deleteBtn: { background: "#FEE2E2", border: "none", borderRadius: "4px", padding: "5px", cursor: "pointer", color: "#991B1B" },
+  editBtn: { background: "#D1FAE5", border: "none", borderRadius: "4px", padding: "5px", cursor: "pointer", color: "#065F46" },
   modalOverlay: { position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 },
   modal: { backgroundColor: "#fff", borderRadius: "12px", padding: "24px", width: "100%", maxWidth: "440px", boxShadow: "0 20px 40px rgba(0,0,0,0.15)" },
   modalHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" },

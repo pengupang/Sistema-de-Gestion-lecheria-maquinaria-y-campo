@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
-import { Plus, X, ChevronLeft, ChevronRight } from "lucide-react"
+import { useNavigate } from "react-router-dom"
+import { Plus, Pencil, ChevronLeft, ChevronRight } from "lucide-react"
 import { animales as animalesApi, sanidad as sanidadApi, etiquetaAnimal } from "../services/lecheria"
 import { TIPOS_EVENTO } from "./estilosLecheria"
 
@@ -10,18 +11,16 @@ const today = new Date()
 const DIAS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"]
 const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
 
+// Vista de solo lectura: los eventos son registros de Sanidad y se crean/editan en /lecheria/registrar?tipo=sanidad
 export default function VistaCalendarioAnimales() {
+  const navigate = useNavigate()
   const [eventos, setEventos] = useState([])
-  const [animales, setAnimales] = useState([])
-  const [showAdd, setShowAdd] = useState(false)
-  const [newEvento, setNewEvento] = useState({ animal_id: "", tipo: Object.keys(tiposEvento)[0], fecha: "", nota: "" })
   const [error, setError] = useState(null)
 
   // Los eventos salen de los registros de Sanidad (misma fuente de datos)
   const cargar = async () => {
     try {
       const [a, reg] = await Promise.all([animalesApi.listar(), sanidadApi.listar()])
-      setAnimales(a)
       setEventos(reg.map(r => {
         const [y, m, d] = r.fecha.split("-").map(Number)
         return {
@@ -52,34 +51,14 @@ export default function VistaCalendarioAnimales() {
     e.fecha.getDate() === day
   )
 
-  const addEvento = async () => {
-    if (!newEvento.animal_id || !newEvento.fecha) { setError("Selecciona un animal y una fecha"); return }
-    try {
-      setError(null)
-      await sanidadApi.crear({
-        animal_id: Number(newEvento.animal_id),
-        tipo: newEvento.tipo,
-        producto: "",
-        fecha: newEvento.fecha,
-        proximo_control: null,
-        costo: 0,
-        responsable: "",
-        estado: "pendiente",
-        nota: newEvento.nota,
-      })
-      setNewEvento({ animal_id: "", tipo: Object.keys(tiposEvento)[0], fecha: "", nota: "" })
-      setShowAdd(false)
-      await cargar()
-    } catch (e) {
-      setError(e.message)
-    }
-  }
-
-  const deleteEvento = async (id) => {
-    try { await sanidadApi.eliminar(id); await cargar() } catch (e) { setError(e.message) }
-  }
 
   const eventosDelDiaSeleccionado = selectedDay ? getEventosDelDia(selectedDay) : []
+  const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+  // Nuevo evento: si hay un día elegido, se prellena esa fecha
+  const nuevoEvento = () => {
+    const fecha = selectedDay ? iso(new Date(viewDate.getFullYear(), viewDate.getMonth(), selectedDay)) : null
+    navigate(`/lecheria/registrar?tipo=sanidad${fecha ? `&fecha=${fecha}` : ""}`)
+  }
 
   return (
     <div style={styles.container}>
@@ -88,10 +67,12 @@ export default function VistaCalendarioAnimales() {
           <h2 style={styles.title}>Calendario de Animales</h2>
           <p style={styles.sub}>{eventos.length} eventos registrados</p>
         </div>
-        <button style={styles.btnAdd} onClick={() => setShowAdd(true)}>
-          <Plus size={15} /> Agregar evento
+        <button style={styles.btnAdd} onClick={nuevoEvento}>
+          <Plus size={15} /> {selectedDay ? `Agregar el ${selectedDay}` : "Agregar evento"}
         </button>
       </div>
+
+      {error && <div style={{ padding: "12px 16px", backgroundColor: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, fontSize: 13, color: "#991B1B" }}>No se pudieron cargar los eventos: {error}</div>}
 
       {/* Leyenda */}
       <div style={styles.leyenda}>
@@ -156,8 +137,8 @@ export default function VistaCalendarioAnimales() {
                   </div>
                   <p style={styles.eventoAnimal}>{e.animal}</p>
                   {e.nota && <p style={styles.eventoNota}>{e.nota}</p>}
-                  <button style={styles.deleteBtn} onClick={() => deleteEvento(e.id)}>
-                    <X size={12} /> Eliminar
+                  <button style={styles.deleteBtn} onClick={() => navigate(`/lecheria/registrar?tipo=sanidad&id=${e.id}`)}>
+                    <Pencil size={12} /> Editar
                   </button>
                 </div>
               ))
@@ -181,56 +162,13 @@ export default function VistaCalendarioAnimales() {
         </div>
       </div>
 
-      {/* Modal agregar */}
-      {showAdd && (
-        <div style={styles.modalOverlay}>
-          <div style={styles.modal}>
-            <div style={styles.modalHeader}>
-              <h3 style={styles.modalTitle}>Nuevo evento</h3>
-              <button style={styles.iconBtn} onClick={() => setShowAdd(false)}><X size={16} /></button>
-            </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <label style={styles.label}>Animal</label>
-                <select style={styles.input} value={newEvento.animal_id}
-                  onChange={e => setNewEvento({ ...newEvento, animal_id: e.target.value })}>
-                  <option value="">Seleccionar...</option>
-                  {animales.map(a => <option key={a.id} value={a.id}>{etiquetaAnimal(a)}</option>)}
-                </select>
-              </div>
-              <div>
-                <label style={styles.label}>Tipo de evento</label>
-                <select style={styles.input} value={newEvento.tipo}
-                  onChange={e => setNewEvento({ ...newEvento, tipo: e.target.value })}>
-                  {Object.keys(tiposEvento).map(t => <option key={t}>{t}</option>)}
-                </select>
-              </div>
-              <div>
-                <label style={styles.label}>Fecha</label>
-                <input style={styles.input} type="date" value={newEvento.fecha}
-                  onChange={e => setNewEvento({ ...newEvento, fecha: e.target.value })} />
-              </div>
-              <div>
-                <label style={styles.label}>Nota (opcional)</label>
-                <input style={styles.input} value={newEvento.nota}
-                  onChange={e => setNewEvento({ ...newEvento, nota: e.target.value })} />
-              </div>
-            </div>
-            {error && <p style={{ fontSize: 12, color: "#DC2626", margin: "12px 0 0 0" }}>{error}</p>}
-            <div style={styles.modalFooter}>
-              <button style={styles.btnCancel} onClick={() => setShowAdd(false)}>Cancelar</button>
-              <button style={styles.btnSave} onClick={addEvento}>Guardar</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
 
 const styles = {
   container: { display: "flex", flexDirection: "column", gap: "20px" },
-  topBar: { display: "flex", justifyContent: "space-between", alignItems: "flex-start" },
+  topBar: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" },
   title: { fontSize: "18px", fontWeight: 700, color: "#1E293B", margin: 0 },
   sub: { fontSize: "13px", color: "#94A3B8", margin: "4px 0 0 0" },
   btnAdd: { display: "flex", alignItems: "center", gap: "6px", padding: "8px 16px", backgroundColor: "#3D6B4F", border: "none", borderRadius: "6px", color: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer" },
@@ -257,7 +195,7 @@ const styles = {
   eventoTipo: { display: "inline-block", padding: "2px 8px", borderRadius: "20px", fontSize: "11px", fontWeight: 600, marginBottom: "4px" },
   eventoAnimal: { fontSize: "13px", fontWeight: 600, color: "#1E293B", margin: "0 0 4px 0" },
   eventoNota: { fontSize: "12px", color: "#64748B", margin: "0 0 6px 0" },
-  deleteBtn: { display: "flex", alignItems: "center", gap: "4px", background: "none", border: "none", color: "#EF4444", fontSize: "11px", cursor: "pointer", padding: 0 },
+  deleteBtn: { display: "flex", alignItems: "center", gap: "4px", background: "none", border: "none", color: "#3D6B4F", fontSize: "11px", cursor: "pointer", padding: 0 },
   modalOverlay: { position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 },
   modal: { backgroundColor: "#fff", borderRadius: "12px", padding: "24px", width: "100%", maxWidth: "440px", boxShadow: "0 20px 40px rgba(0,0,0,0.15)" },
   modalHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" },

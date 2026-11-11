@@ -1,4 +1,4 @@
-import { Leaf, ShoppingBasket, Truck, CalendarDays, PieChart, LayoutDashboard, PawPrint, Stethoscope, GitBranch } from "lucide-react"
+import { Leaf, ShoppingBasket, Truck, CalendarDays, PieChart, LayoutDashboard, PawPrint, Stethoscope, GitBranch, ClipboardPlus } from "lucide-react"
 import LayoutModulo from "./LayoutModulo"
 
 const navItems = [
@@ -11,10 +11,11 @@ const navItems = [
   { label: "Rebaño y Potreros", icon: PawPrint, path: "/lecheria/rebano" },
   { label: "Sanidad y Manejo", icon: Stethoscope, path: "/lecheria/sanidad" },
   { label: "Genealogía", icon: GitBranch, path: "/lecheria/genealogia" },
+  { label: "Registros", icon: ClipboardPlus, path: "/lecheria/registrar" },
 ]
 
 // Atajos de la barra inferior en celular (máx. 4; el resto queda en "Más")
-const atajos = ["/lecheria/dashboard", "/lecheria/plantcare", "/lecheria/comidas", "/lecheria/calendario"]
+const atajos = ["/lecheria/dashboard", "/lecheria/plantcare", "/lecheria/comidas", "/lecheria/registrar"]
 
 // Clases completas (no armadas con variables) para que Tailwind las incluya
 const tema = {
