@@ -209,7 +209,7 @@ export const fallas = crud("fallas_maquinas", {
 })
 
 //______Mantenciones________
-export const mantenciones_maquinas = crud("mantenciones",{
+export const mantenciones_maquinas = crud("mantenciones_maquinas",{
   select: "*, maquina:maquinas(nombre,modelo)",
   orden:"inicio",
   ascendente: false,
