@@ -130,6 +130,54 @@ export const facturas = {
     ),
 }
 
+// ───────────── Documentos (facturas y boletas escaneadas; también llegan por el bot) ─────────────
+const baseDocumentos = crud("facturas_archivos", { orden: "creado_en", ascendente: false })
+
+const TIPOS_DOC = { "application/pdf": "pdf", "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" }
+const MAX_DOC = 15 * 1024 * 1024 // 15 MB, igual que el bot
+
+export const documentos = {
+  listar: baseDocumentos.listar,       // tal cual: solo lee la tabla
+  actualizar: baseDocumentos.actualizar, // para editar la nota
+
+  // Enlace temporal (1 hora) para abrir un archivo del bucket privado
+  urlFirmada: async (ruta) => {
+    const { data, error } = await supabase.storage.from("facturas").createSignedUrl(ruta, 3600)
+    if (error) throw new Error(error.message)
+    return data.signedUrl
+  },
+
+  // Sube el archivo al bucket y registra la fila; si la fila falla, borra el archivo
+  subir: async (archivo, nota, empresaId, userId) => {
+    const ext = TIPOS_DOC[archivo.type]
+    if (!ext) throw new Error("Solo se aceptan PDF o imágenes (JPG, PNG, WEBP).")
+    if (archivo.size > MAX_DOC) throw new Error("El archivo pesa más de 15 MB.")
+
+    const hoy = hoyISO()
+    const ruta = `${empresaId}/${hoy.slice(0, 4)}/${hoy.slice(5, 7)}/${crypto.randomUUID()}.${ext}`
+
+    const { error: errSubida } = await supabase.storage.from("facturas").upload(ruta, archivo, { contentType: archivo.type })
+    if (errSubida) throw new Error(errSubida.message)
+
+    try {
+      return await baseDocumentos.crear({
+        empresa_id: empresaId, subido_por: userId, ruta,
+        nombre_original: archivo.name.slice(0, 200), tipo_mime: archivo.type,
+        tamano: archivo.size, nota: nota?.trim() || null, origen: "web",
+      })
+    } catch (e) {
+      await supabase.storage.from("facturas").remove([ruta]) // no dejar archivos huérfanos
+      throw e
+    }
+  },
+
+  // Borra la fila y después el archivo
+  eliminar: async (doc) => {
+    await baseDocumentos.eliminar(doc.id)
+    await supabase.storage.from("facturas").remove([doc.ruta])
+  },
+}
+
 // ───────────── Calendario (arriendos + mantenciones que tocan el rango) ─────────────
 export const calendario = async (desde, hasta) =>
   traerTodo(() =>
@@ -214,3 +262,5 @@ export const mantenciones_maquinas = crud("mantenciones_maquinas",{
   orden:"inicio",
   ascendente: false,
 })
+
+

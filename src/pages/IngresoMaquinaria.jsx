@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react"
 import { useSearchParams } from "react-router-dom"
-import { Pencil, Trash2, Search, ClipboardList, Wrench, Settings, Users,Hammer,AlertTriangle } from "lucide-react"
-import { arriendos as arriendosApi, maquinas as maquinasApi, servicios as serviciosApi, clientes as clientesApi, fallas as fallasApi, mantenciones_maquinas as mantencionesApi } from "@/services/maquinaria"
+import { Pencil, Trash2, Search, ClipboardList, Wrench, Settings, Users,Hammer,AlertTriangle, FileText } from "lucide-react"
+import { arriendos as arriendosApi, maquinas as maquinasApi, servicios as serviciosApi, clientes as clientesApi, fallas as fallasApi, mantenciones_maquinas as mantencionesApi, documentos as documentosApi } from "@/services/maquinaria"
 import useCarga from "@/lib/useCarga"
 import { clp, fechaCL, fechaHoraCL, duracionFalla } from "@/lib/formato"
 import EstadoCarga from "@/components/EstadoCarga"
@@ -11,6 +11,7 @@ import FormServicio from "@/components/maquinaria/forms/FormServicio"
 import FormCliente from "@/components/maquinaria/forms/FormCliente"
 import FormMantencion from "@/components/maquinaria/forms/FormMantencion"
 import FormFalla from "@/components/maquinaria/forms/FormFalla"
+import FormDocumento from "@/components/maquinaria/forms/FormDocumento"
 import s, { AZUL, ESTADO_ARRIENDO, ESTADO_MAQUINA, ESTADO_MANTENCION} from "./EstilosMaquinaria"
 
 
@@ -25,6 +26,7 @@ const TABS = [
   { id: "cliente", label: "Clientes", icono: Users },
   { id: "falla", label: "Fallas", icono: AlertTriangle},
   { id: "mantencion", label: "Mantención", icono: Hammer},
+  { id: "documento", label: "Documentos", icono: FileText },
 ]
 
 export default function IngresoMaquinaria() {
@@ -40,27 +42,29 @@ export default function IngresoMaquinaria() {
     return { arriendos, maquinas, servicios, clientes }
   }, [])
   const { datos, cargando, error, setError, recargar } = useCarga(cargarTodo, { arriendos: [], maquinas: [], servicios: [], clientes: [] })
-  const esExtra = tipo === "falla" || tipo === "mantencion"
+  const esExtra = ["falla", "mantencion", "documento"].includes(tipo)
 
 const cargarExtra = async () => {
-  if (!esExtra) return { fallas: [], mantenciones: [] }   // otras pestañas: no consulta nada
-  const [fallas, mantenciones] = await Promise.all([
-    fallasApi.listar(),
-    mantencionesApi.listar(),
-  ])
-  return { fallas, mantenciones }
+  const vacio = { fallas: [], mantenciones: [], documentos: [] }
+  if (tipo === "documento") return { ...vacio, documentos: await documentosApi.listar() }
+  if (tipo === "falla" || tipo === "mantencion") {
+    const [fallas, mantenciones] = await Promise.all([fallasApi.listar(), mantencionesApi.listar()])
+    return { ...vacio, fallas, mantenciones }
+  }
+  return vacio
 }
   const {
   datos: extra,
   error: errorExtra,
   setError: setErrorExtra,
   recargar: recargarExtra,
-} = useCarga(cargarExtra, { fallas: [], mantenciones: [] }, esExtra ? "extra" : "")
+} = useCarga(cargarExtra, { fallas: [], mantenciones: [], documentos: [] },
+  tipo === "documento" ? "doc" : esExtra ? "extra" : "")
   const recargarAmbos = async () => { await Promise.all([recargar(), recargarExtra()]) }
   const { arriendos, maquinas, servicios, clientes } = datos
   const catalogo = { clientes, maquinas, servicios, arriendos }
 
-  const lista = { arriendo: arriendos, maquina: maquinas, servicio: servicios, cliente: clientes, falla: extra.fallas, mantencion: extra.mantenciones}[tipo]
+  const lista = { arriendo: arriendos, maquina: maquinas, servicio: servicios, cliente: clientes, falla: extra.fallas, mantencion: extra.mantenciones,documento: extra.documentos,}[tipo]
   const editando = id ? lista.find((x) => String(x.id) === id) : null
   const fallaOrigen = tipo === "mantencion" && params.get("falla")
   ? extra.fallas.find((f) => String(f.id) === params.get("falla"))
@@ -101,7 +105,8 @@ const inicialNuevo =
     servicio: <FormServicio key={key} {...props} maquinas={maquinas} />,
     cliente: <FormCliente key={key} {...props} />,
     falla: <FormFalla key={key} {...props} catalogo={catalogo}/>,
-    mantencion: <FormMantencion key={key} {...props} catalogo={catalogo}/>
+    mantencion: <FormMantencion key={key} {...props} catalogo={catalogo}/>,
+    documento: <FormDocumento key={key} {...props} />,
   }[tipo]
 
   // ---------- Lista de gestión (editar / eliminar) ----------
@@ -114,6 +119,7 @@ const inicialNuevo =
       cliente: (c) => `${c.nombre} ${c.rut ?? ""} ${c.comuna ?? ""}`,
       falla: (f) => `${f.maquina?.nombre} ${f.categoria} ${f.descripcion ?? ""} ${f.arriendo?.cliente?.nombre ?? ""}`,
       mantencion: (m) => `${m.maquina?.nombre} ${m.tipo} ${m.taller ?? ""} ${m.notas ?? ""}`,
+      documento: (d) => `${d.nota ?? ""} ${d.nombre_original ?? ""} ${d.origen ?? ""}`,
     }[tipo]
     let r = lista.filter((x) => !t || texto(x).toLowerCase().includes(t))
     if (tipo === "arriendo") r = [...r].sort((a, b) => b.inicio.localeCompare(a.inicio))
@@ -127,7 +133,18 @@ const inicialNuevo =
     servicio: ["Servicio", "Unidad", "Máquinas", ""],
     cliente: ["Nombre / RUT", "Comuna", "Tipo", "Estado", ""],
     falla: ["Máquina", "Inicio", "Duración", "Categoría", "Arriendo / Cliente", "Mantención",""],
+    documento: ["Fecha", "Documento", "Origen", "Archivo", ""],
   }[tipo]
+
+  const abrirDocumento = async (doc) => {
+  const ventana = window.open("", "_blank") // se abre antes del await para que el navegador no la bloquee
+  try {
+    ventana.location = await documentosApi.urlFirmada(doc.ruta)
+  } catch (e) {
+    ventana.close()
+    setErrorExtra(e.message)
+  }
+}
 
   const acciones = (item, texto, api) => (
     <td style={s.td}>
@@ -200,6 +217,22 @@ const inicialNuevo =
         <td style={s.td}><span style={{ ...s.badge, ...ESTADO_MANTENCION[x.estado] }}>{x.estado}</span></td>
         {acciones(x, `¿Eliminar la mantención de ${x.maquina?.nombre}?`, mantencionesApi)}
       </tr>
+)
+
+if (tipo === "documento") return (
+  <tr key={x.id} style={marcada}>
+    <td style={s.td}>{fechaHoraCL(x.creado_en)}</td>
+    <td style={s.td}>
+      <span style={s.nombre}>{x.nota || x.nombre_original}</span>
+      {x.nota && <span style={s.rutTxt}>{x.nombre_original}</span>}
+    </td>
+    <td style={s.td}>{x.origen === "telegram" ? "Telegram" : "Web"}</td>
+    <td style={s.td}>
+      <button style={s.btnCancel} onClick={() => abrirDocumento(x)}>Abrir</button>
+    </td>
+    {acciones(x, `¿Eliminar "${x.nota || x.nombre_original}"? Se borrará también el archivo.`,
+      { eliminar: () => documentosApi.eliminar(x) })}
+  </tr>
 )
     return (
       <tr key={x.id} style={marcada}>
