@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react"
 import { useSearchParams } from "react-router-dom"
-import { Pencil, Trash2, Search, ClipboardList, Wrench, Settings, Users,Hammer,AlertTriangle, FileText } from "lucide-react"
+import { Upload,Pencil, Trash2, Search, ClipboardList, Wrench, Settings, Users,Hammer,AlertTriangle, FileText } from "lucide-react"
 import { arriendos as arriendosApi, maquinas as maquinasApi, servicios as serviciosApi, clientes as clientesApi, fallas as fallasApi, mantenciones_maquinas as mantencionesApi, documentos as documentosApi } from "@/services/maquinaria"
 import useCarga from "@/lib/useCarga"
 import { clp, fechaCL, fechaHoraCL, duracionFalla } from "@/lib/formato"
@@ -13,7 +13,7 @@ import FormMantencion from "@/components/maquinaria/forms/FormMantencion"
 import FormFalla from "@/components/maquinaria/forms/FormFalla"
 import FormDocumento from "@/components/maquinaria/forms/FormDocumento"
 import s, { AZUL, ESTADO_ARRIENDO, ESTADO_MAQUINA, ESTADO_MANTENCION} from "./EstilosMaquinaria"
-
+import ImportarArriendos from "@/components/maquinaria/ImportarArriendo"
 
 
 // Página de ingreso del módulo maquinaria. Todo lo que escribe datos vive aquí;
@@ -27,6 +27,7 @@ const TABS = [
   { id: "falla", label: "Fallas", icono: AlertTriangle},
   { id: "mantencion", label: "Mantención", icono: Hammer},
   { id: "documento", label: "Documentos", icono: FileText },
+  { id: "importar", label: "Importar", icono: Upload },
 ]
 
 export default function IngresoMaquinaria() {
@@ -64,7 +65,8 @@ const cargarExtra = async () => {
   const { arriendos, maquinas, servicios, clientes } = datos
   const catalogo = { clientes, maquinas, servicios, arriendos }
 
-  const lista = { arriendo: arriendos, maquina: maquinas, servicio: servicios, cliente: clientes, falla: extra.fallas, mantencion: extra.mantenciones,documento: extra.documentos,}[tipo]
+  const lista = { arriendo: arriendos, maquina: maquinas, servicio: servicios, cliente: clientes, falla: extra.fallas, mantencion: extra.mantenciones,documento: extra.documentos,importar: arriendos,
+}[tipo]
   const editando = id ? lista.find((x) => String(x.id) === id) : null
   const fallaOrigen = tipo === "mantencion" && params.get("falla")
   ? extra.fallas.find((f) => String(f.id) === params.get("falla"))
@@ -107,6 +109,7 @@ const inicialNuevo =
     falla: <FormFalla key={key} {...props} catalogo={catalogo}/>,
     mantencion: <FormMantencion key={key} {...props} catalogo={catalogo}/>,
     documento: <FormDocumento key={key} {...props} />,
+    importar: <ImportarArriendos key={key} catalogo={catalogo} onImportado={recargarAmbos} />,
   }[tipo]
 
   // ---------- Lista de gestión (editar / eliminar) ----------
@@ -134,6 +137,7 @@ const inicialNuevo =
     cliente: ["Nombre / RUT", "Comuna", "Tipo", "Estado", ""],
     falla: ["Máquina", "Inicio", "Duración", "Categoría", "Arriendo / Cliente", "Mantención",""],
     documento: ["Fecha", "Documento", "Origen", "Archivo", ""],
+    importar: [],
   }[tipo]
 
   const abrirDocumento = async (doc) => {
@@ -234,6 +238,7 @@ if (tipo === "documento") return (
       { eliminar: () => documentosApi.eliminar(x) })}
   </tr>
 )
+
     return (
       <tr key={x.id} style={marcada}>
         <td style={s.td}><span style={s.nombre}>{x.nombre}</span><span style={s.rutTxt}>{x.rut}</span></td>
@@ -266,33 +271,35 @@ if (tipo === "documento") return (
       <EstadoCarga cargando={false} error={error} onReintentar={recargar} />
       <EstadoCarga cargando={false} error={errorExtra} onReintentar={recargarExtra} />
 
-      {!cargando && (
+            {!cargando && (
         <>
           {id && !editando
             ? <div style={s.errorBox}>No se encontró el registro #{id}. <button style={s.btnCancel} onClick={cancelar}>Crear uno nuevo</button></div>
             : formulario}
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <div style={{ ...s.filtros, justifyContent: "space-between" }}>
-              <h3 style={{ ...s.modalTitle, fontSize: 14 }}>Registros existentes</h3>
-              <div style={s.filtros}>
-                <div style={s.buscador}>
-                  <Search size={14} color="#94A3B8" />
-                  <input style={s.buscadorInput} placeholder="Buscar..." value={q} onChange={(e) => setQ(e.target.value)} />
+          {tipo !== "importar" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div style={{ ...s.filtros, justifyContent: "space-between" }}>
+                <h3 style={{ ...s.modalTitle, fontSize: 14 }}>Registros existentes</h3>
+                <div style={s.filtros}>
+                  <div style={s.buscador}>
+                    <Search size={14} color="#94A3B8" />
+                    <input style={s.buscadorInput} placeholder="Buscar..." value={q} onChange={(e) => setQ(e.target.value)} />
+                  </div>
                 </div>
               </div>
+              <div style={s.tableCard}>
+                <table style={s.table}>
+                  <thead><tr>{columnas.map((h) => <th key={h} style={s.th}>{h}</th>)}</tr></thead>
+                  <tbody>
+                    {filas.map(fila)}
+                    {filas.length === 0 && <tr><td colSpan={columnas.length} style={s.vacio}>Sin registros.</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+              <p style={{ ...s.sub, margin: 0 }}>Se muestran hasta 50 registros; usa el buscador para encontrar otros.</p>
             </div>
-            <div style={s.tableCard}>
-              <table style={s.table}>
-                <thead><tr>{columnas.map((h) => <th key={h} style={s.th}>{h}</th>)}</tr></thead>
-                <tbody>
-                  {filas.map(fila)}
-                  {filas.length === 0 && <tr><td colSpan={columnas.length} style={s.vacio}>Sin registros.</td></tr>}
-                </tbody>
-              </table>
-            </div>
-            <p style={{ ...s.sub, margin: 0 }}>Se muestran hasta 50 registros; usa el buscador para encontrar otros.</p>
-          </div>
+          )}
         </>
       )}
     </div>

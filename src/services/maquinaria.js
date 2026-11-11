@@ -114,6 +114,8 @@ const baseArriendos = crud("arriendos", { select: SEL_ARRIENDO, orden: "inicio",
 export const arriendos = {
   listar: baseArriendos.listar,
   crear: (datos) => baseArriendos.crear(pick(datos, COLS_ARRIENDO)),
+  crearVarios : async (lista)=>
+      check(await supabase.from("arriendos").insert(lista.map((d)=> pick (d,COLS_ARRIENDO))).select("id")),
   actualizar: (id, datos) => baseArriendos.actualizar(id, pick(datos, COLS_ARRIENDO)),
   eliminar: baseArriendos.eliminar, // las facturas del arriendo se borran en cascada
 }

@@ -63,13 +63,17 @@ export default function VistaArriendos() {
                   onClick={() =>
                     descargarCSV(`arriendos-${fAnio || "todos"}`, [
                       { titulo: "Cliente", valor: (a) => a.cliente?.nombre },
-                      { titulo: "Máquina", valor: (a) => `${a.maquina?.nombre ?? ""} ${a.maquina?.modelo ?? ""}` },
+                      { titulo: "Máquina", valor: (a) => `${a.maquina?.nombre ?? ""} ${a.maquina?.modelo ?? ""}`.trim() },
                       { titulo: "Servicio", valor: (a) => a.servicio?.nombre },
                       { titulo: "Inicio", valor: (a) => fechaCL(a.inicio) },
                       { titulo: "Término", valor: (a) => fechaCL(a.fin) },
+                      { titulo: "Cantidad", valor: (a) => String(a.cantidad ?? "").replace(".", ",") },
+                      { titulo: "Unidad", valor: (a) => a.unidad },
                       { titulo: "Monto", valor: (a) => a.monto },
                       { titulo: "Pagado", valor: (a) => (a.pagado ? "Sí" : "No") },
                       { titulo: "Estado", valor: (a) => a.estado },
+                      { titulo: "Predio", valor: (a) => a.predio },
+                      { titulo: "Comuna", valor: (a) => a.comuna },
                     ], filtrados)
                   }
                 >
