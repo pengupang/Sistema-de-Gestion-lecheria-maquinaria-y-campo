@@ -9,7 +9,7 @@ export default function Scorecard({ icono: Icono, color, bg, valor, etiqueta, de
           <Icono size={18} color={color} />
         </div>
         <div style={{ minWidth: 0 }}>
-          <p style={s.statValue}>{valor}</p>
+          <p title={typeof valor === "string" ? valor : undefined} style={{...s.statValue,...(typeof valor === "string" && valor.length > 6 ? {fontSize:16, whiteSpace: "nowrap", overflow: "hidden",textOverflow:"ellipsis"}:[])}}>{valor}</p>
           <p style={s.statLabel}>{etiqueta}</p>
           {detalle && <p style={{ ...s.statLabel, fontSize: 11 }}>{detalle}</p>}
         </div>

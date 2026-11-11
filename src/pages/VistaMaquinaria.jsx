@@ -81,7 +81,7 @@ const masFallas = maquinas.reduce(
         </div>
       </div>
 
-      <div style={s.statsRow}>
+      <div style={{...s.statsRow, gridTemplateColumns:"repeat(3, minmax(0, 1fr))"}}>
         <Scorecard icono={Wrench} color="#4A6FA5" bg="#EBF2FB" valor={maquinas.length} etiqueta="Equipos registrados" />
         <Scorecard icono={CheckCircle} color="#065F46" bg="#D1FAE5" valor={cuenta("Disponible")} etiqueta="Disponibles" />
         <Scorecard icono={FileText} color="#92400E" bg="#FEF3C7" valor={cuenta("Arrendada")} etiqueta="En arriendo" />

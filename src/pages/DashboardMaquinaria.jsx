@@ -24,8 +24,8 @@ export default function DashboardMaquinaria() {
       
       {r && (<>
       {/* Stats */}
-      <div className=" grid-rows-1">
-      <div style={styles.grid}>
+      
+      <div style={{...styles.grid, gridTemplateColumns:"repeat(3, minmax(0, 1fr))"}}>
         {stats.map(({ label, value, icon: Icon, color, bg, sub }) => (
           <div key={label} style={styles.card}>
             <div style={{ ...styles.iconBox, backgroundColor: bg }}>
@@ -39,7 +39,7 @@ export default function DashboardMaquinaria() {
           </div>
         ))}
         </div>
-      </div>
+   
       
 
       {/* Arriendos recientes */}
