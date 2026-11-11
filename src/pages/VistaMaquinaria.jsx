@@ -9,12 +9,16 @@ import s, { ESTADO_MAQUINA } from "./EstilosMaquinaria"
 
 // Vista de solo lectura. Ingreso y edición: /maquinaria/registrar?tipo=maquina (desde el menú "Registrar")
 export default function VistaMaquinaria() {
-  const cargarTodo = useCallback(async () => {
-    const [maquinas, arriendos,fallas] = await Promise.all([api.listar(), arriendosApi.listar(), fallasApi.listar().catch])
-    return { maquinas, arriendos, fallas}
+    const cargarTodo = useCallback(async () => {
+    const [maquinas, arriendos, fallas] = await Promise.all([
+      api.listar(),
+      arriendosApi.listar(),
+      fallasApi.listar().catch(() => []), // si la tabla aún no existe, sin fallas
+    ])
+    return { maquinas, arriendos, fallas }
   }, [])
-  const { datos, cargando, error, recargar } = useCarga(cargarTodo, { maquinas: [], arriendos: [], fallas :[]})
-  const { maquinas, arriendos, fallas } = datos
+  const { datos, cargando, error, recargar } = useCarga(cargarTodo, { maquinas: [], arriendos: [], fallas: [] })
+  const { maquinas, arriendos, fallas = [] } = datos
 
   const hoyStr = aInputLocal(new Date()).slice(0, 10)
   const [desde, setDesde] = useState(`${hoyStr.slice(0, 4)}-01-01`)
