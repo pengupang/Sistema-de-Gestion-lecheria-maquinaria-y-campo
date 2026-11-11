@@ -1,13 +1,14 @@
 import { useState } from "react"
 import { maquinas as api } from "@/services/maquinaria"
 import TarjetaFormulario, { Campo } from "@/components/TarjetaFormulario"
-import s, { AZUL, ESTADO_MAQUINA } from "@/pages/EstilosMaquinaria"
+import s, { AZUL } from "@/pages/EstilosMaquinaria"
 
 const vacio = { nombre: "", modelo: "", tipo: "", estado: "Disponible", precio: 0, unidad_cobro: "hora", notas: "" }
 
 // inicial: máquina a editar (o nada para una nueva). onGuardado / onCancel: los decide la página.
 export default function FormMaquina({ inicial, onGuardado, onCancel }) {
-  const [form, setForm] = useState({ ...vacio, ...inicial })
+  // estadoFicha: lo guardado en la base (estado trae el calculado del día)
+  const [form, setForm] = useState({ ...vacio, ...inicial, estado: inicial?.estadoFicha ?? inicial?.estado ?? "Disponible" })
   const [error, setError] = useState(null)
   const [guardando, setGuardando] = useState(false)
 
@@ -51,9 +52,12 @@ export default function FormMaquina({ inicial, onGuardado, onCancel }) {
       <Campo label="Nombre"><input style={s.input} value={form.nombre} onChange={(e) => campo("nombre", e.target.value)} /></Campo>
       <Campo label="Modelo"><input style={s.input} value={form.modelo ?? ""} onChange={(e) => campo("modelo", e.target.value)} /></Campo>
       <Campo label="Tipo"><input style={s.input} value={form.tipo ?? ""} onChange={(e) => campo("tipo", e.target.value)} placeholder="Ej: Fumigación" /></Campo>
-      <Campo label="Estado">
-        <select style={s.input} value={form.estado} onChange={(e) => campo("estado", e.target.value)}>
-          {Object.keys(ESTADO_MAQUINA).map((e) => <option key={e}>{e}</option>)}
+      <Campo label="Fuera de servicio">
+        {/* El estado diario (arrendada, en mantención) se calcula solo con arriendos, mantenciones y fallas.
+            Aquí solo se marca un equipo que está fuera de servicio sin un registro que lo explique. */}
+        <select style={s.input} value={form.estado === "Mantención" ? "Mantención" : "Disponible"} onChange={(e) => campo("estado", e.target.value)}>
+          <option value="Disponible">No (estado automático)</option>
+          <option value="Mantención">Sí, fuera de servicio</option>
         </select>
       </Campo>
       {/* Referencial: el precio real de cada arriendo lo define el dueño según el cliente */}

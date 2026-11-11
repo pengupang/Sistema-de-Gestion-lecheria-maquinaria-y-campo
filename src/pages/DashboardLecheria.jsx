@@ -1,18 +1,20 @@
 import { Leaf, AlertTriangle, Package, Thermometer, Droplets } from "lucide-react"
+import { Link } from "react-router-dom"
 import { resumenLecheria } from "../services/lecheria"
 import useCarga from "../lib/useCarga"
 import { hoyLargo } from "../lib/formato"
 import EstadoCarga from "../components/EstadoCarga"
 
-// TODO: estas mediciones siguen siendo de ejemplo. Los datos reales de PlantCare
-// están en la tabla "Mediciones" (ver lib/groq.js y DashboardPlantCare.jsx).
-const ultimasMediciones = [
-  { parametro: "Humedad suelo", valor: "38.4 %", icono: Droplets, color: "#0EA5E9" },
-  { parametro: "Temperatura suelo", valor: "14.2 °C", icono: Thermometer, color: "#F59E0B" },
-  { parametro: "pH", valor: "6.8", icono: Leaf, color: "#10B981" },
-  { parametro: "Nitrógeno (N)", valor: "142 mg/kg", icono: Leaf, color: "#8B5CF6" },
-  { parametro: "Fósforo (P)", valor: "89 mg/kg", icono: Leaf, color: "#EC4899" },
-  { parametro: "Potasio (K)", valor: "210 mg/kg", icono: Leaf, color: "#F59E0B" },
+// Variables de la última medición real (tabla mediciones). Se muestran solo las que vienen con dato.
+const VARIABLES_MEDICION = [
+  { campo: "humedad_suelo", parametro: "Humedad suelo / cama", unidad: "%", icono: Droplets, color: "#0EA5E9" },
+  { campo: "temperatura_suelo", parametro: "Temperatura suelo / cama", unidad: "°C", icono: Thermometer, color: "#F59E0B" },
+  { campo: "humedad_ambiente", parametro: "Humedad ambiente", unidad: "%", icono: Droplets, color: "#0E7490" },
+  { campo: "temperatura_ambiente", parametro: "Temperatura ambiente", unidad: "°C", icono: Thermometer, color: "#EF4444" },
+  { campo: "ph", parametro: "pH", unidad: "", icono: Leaf, color: "#10B981" },
+  { campo: "nitrogeno", parametro: "Nitrógeno (N)", unidad: "kg/ha", icono: Leaf, color: "#8B5CF6" },
+  { campo: "fosforo", parametro: "Fósforo (P)", unidad: "kg/ha", icono: Leaf, color: "#EC4899" },
+  { campo: "potasio", parametro: "Potasio (K)", unidad: "kg/ha", icono: Leaf, color: "#F59E0B" },
 ]
 
 export default function DashboardLecheria() {
@@ -91,20 +93,28 @@ export default function DashboardLecheria() {
         <div style={{ ...styles.tableCard, flex: 1 }}>
           <div style={styles.tableHeader}>
             <Leaf size={16} color="#3D6B4F" />
-            <h3 style={styles.tableTitle}>Última medición PlantCare</h3>
+            <h3 style={styles.tableTitle}>Última medición</h3>
           </div>
           <div style={styles.medicionesList}>
-            {ultimasMediciones.map(({ parametro, valor, icono: Icon, color }) => (
-              <div key={parametro} style={styles.medicionRow}>
-                <div style={{ ...styles.medicionIcon, backgroundColor: color + "18" }}>
-                  <Icon size={14} color={color} />
+            {(() => {
+              const m = r.ultimaMedicion
+              const filas = m ? VARIABLES_MEDICION.filter((v) => m[v.campo] != null) : []
+              if (!filas.length) return <p style={styles.medicionFecha}>Aún no hay mediciones registradas.</p>
+              return filas.map(({ campo, parametro, unidad, icono: Icon, color }) => (
+                <div key={campo} style={styles.medicionRow}>
+                  <div style={{ ...styles.medicionIcon, backgroundColor: color + "18" }}>
+                    <Icon size={14} color={color} />
+                  </div>
+                  <span style={styles.medicionLabel}>{parametro}</span>
+                  <span style={styles.medicionValor}>{Number(m[campo]).toLocaleString("es-CL", { maximumFractionDigits: 1 })} {unidad}</span>
                 </div>
-                <span style={styles.medicionLabel}>{parametro}</span>
-                <span style={styles.medicionValor}>{valor}</span>
-              </div>
-            ))}
+              ))
+            })()}
           </div>
-          <p style={styles.medicionFecha}>Valores de ejemplo — pendiente conectar a Mediciones</p>
+          <p style={styles.medicionFecha}>
+            {r.ultimaMedicion ? `Medida el ${new Date(r.ultimaMedicion.created_at).toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" })} · ` : ""}
+            <Link to="/lecheria/mediciones" style={{ color: "#3D6B4F" }}>Ver todas las mediciones</Link>
+          </p>
         </div>
       </div>
       </>)}

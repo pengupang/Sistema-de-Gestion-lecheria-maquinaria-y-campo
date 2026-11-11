@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react"
 import {AlertTriangle, Search, Wrench, CheckCircle, FileText, AlertCircle } from "lucide-react"
-import { maquinas as api, arriendos as arriendosApi , fallas as fallasApi} from "@/services/maquinaria"
+import { maquinas as api, arriendos as arriendosApi, fallas as fallasApi, estadoActualMaquinas, conEstadoActual } from "@/services/maquinaria"
 import useCarga from "@/lib/useCarga"
 import { clp, fechaCL, aInputLocal, horasFalla} from "@/lib/formato"
 import EstadoCarga from "@/components/EstadoCarga"
@@ -12,12 +12,14 @@ import tw from "@/lib/ui"
 // Vista de solo lectura. Ingreso y edición: /maquinaria/registrar?tipo=maquina (desde el menú "Registrar")
 export default function VistaMaquinaria() {
     const cargarTodo = useCallback(async () => {
-    const [maquinas, arriendos, fallas] = await Promise.all([
+    const [lista, arriendos, fallas, estados] = await Promise.all([
       api.listar(),
       arriendosApi.listar(),
       fallasApi.listar().catch(() => []), // si la tabla aún no existe, sin fallas
+      estadoActualMaquinas(),
     ])
-    return { maquinas, arriendos, fallas }
+    // El estado (Disponible / Arrendada / Mantención) se calcula con los arriendos, mantenciones y fallas de hoy
+    return { maquinas: conEstadoActual(lista, estados), arriendos, fallas }
   }, [])
   const { datos, cargando, error, recargar } = useCarga(cargarTodo, { maquinas: [], arriendos: [], fallas: [] })
   const { maquinas, arriendos, fallas = [] } = datos
@@ -151,7 +153,7 @@ const masFallas = maquinas.reduce(
                   <tr key={m.id} style={{ backgroundColor: i % 2 === 0 ? "#F8FAFC" : "#fff" }}>
                     <td className={tw.td}><span style={s.nombre}>{m.nombre}</span><span style={s.rutTxt}>{m.modelo}</span></td>
                     <td className={tw.td}>{m.tipo || "—"}</td>
-                    <td className={tw.td}><span style={{ ...s.badge, ...ESTADO_MAQUINA[m.estado] }}>{m.estado}</span></td>
+                    <td className={tw.td}><span style={{ ...s.badge, ...ESTADO_MAQUINA[m.estado] }}>{m.estado}</span>{m.motivoEstado && <span style={s.rutTxt}>{m.motivoEstado}</span>}</td>
                     <td className={tw.td}>{clp(m.precio)} <span style={{ color: "#94A3B8" }}>/ {m.unidad_cobro}</span></td>
                     <td className={tw.td}>{u?.n ?? 0}</td>
                     <td className={tw.td}>{u ? clp(u.monto) : "—"}</td>

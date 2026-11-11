@@ -59,12 +59,27 @@ export default function FormFalla({ inicial, catalogo, onGuardado, onCancel }) {
     )
   }, [arriendos, form.maquina_id, form.inicio, form.arriendo_id])
 
+  // Si se extiende el arriendo, el nuevo término no puede pisar otro arriendo de la misma máquina
+  const choqueExtension = useMemo(() => {
+    if (!form.extender || !form.arriendo_id || !(Number(form.dias) > 0)) return null
+    const a = arriendos.find((x) => String(x.id) === String(form.arriendo_id))
+    if (!a) return null
+    const nuevoFin = sumarDias(a.fin, Number(form.dias))
+    const otro = arriendos.find((x) =>
+      String(x.maquina_id) === String(a.maquina_id) && String(x.id) !== String(a.id) &&
+      x.inicio <= nuevoFin && x.fin >= a.inicio
+    )
+    return otro ? { otro, nuevoFin } : null
+  }, [arriendos, form.extender, form.arriendo_id, form.dias])
+
   const guardar = async () => {
     if (!form.maquina_id) return setError("Selecciona la máquina")
     if (!form.inicio) return setError("Indica cuándo empezó la falla")
     if (form.fin && form.fin < form.inicio) return setError("El fin no puede ser anterior al inicio")
     if (!form.categoria) return setError("Selecciona una categoría")
     if (form.extender && !(Number(form.dias) > 0)) return setError("Indica cuántos días extender el arriendo")
+    if (choqueExtension)
+      return setError(`Extender hasta el ${fechaCL(choqueExtension.nuevoFin)} pisa otro arriendo de esta máquina. Reduce los días o reprograma ese arriendo.`)
 
     const payload = {
       maquina_id: form.maquina_id,
@@ -88,7 +103,7 @@ export default function FormFalla({ inicial, catalogo, onGuardado, onCancel }) {
           try {
             await arriendosApi.actualizar(a.id, { ...a, fin: sumarDias(a.fin, Number(form.dias)) })
           } catch (e) {
-            throw new Error(`La falla se guardó, pero no se pudo extender el arriendo: ${e.message}`)
+            throw new Error(`La falla se guardó, pero no se pudo extender el arriendo: ${e.message}`, { cause: e })
           }
         }
         setForm(vacio())
@@ -165,6 +180,14 @@ export default function FormFalla({ inicial, catalogo, onGuardado, onCancel }) {
               />
             )}
             {form.extender && <span style={{ fontSize: 13 }}>días</span>}
+          </div>
+        </Campo>
+      )}
+      {choqueExtension && (
+        <Campo label="" full>
+          <div style={s.errorBox}>
+            Con esa extensión el arriendo terminaría el {fechaCL(choqueExtension.nuevoFin)} y chocaría con el arriendo de{" "}
+            {choqueExtension.otro.cliente?.nombre ?? "otro cliente"} ({fechaCL(choqueExtension.otro.inicio)} al {fechaCL(choqueExtension.otro.fin)}).
           </div>
         </Campo>
       )}

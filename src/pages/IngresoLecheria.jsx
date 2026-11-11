@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react"
 import { useSearchParams } from "react-router-dom"
-import { Pencil, Trash2, Search, Check, ShoppingBasket, Truck, Receipt, PawPrint, LandPlot, Stethoscope, Upload } from "lucide-react"
+import { Pencil, Trash2, Search, Check, ShoppingBasket, Truck, Receipt, PawPrint, LandPlot, Stethoscope, Upload, FileUp } from "lucide-react"
 import {
   insumos as insumosApi, proveedores as proveedoresApi, gastos as gastosApi,
   animales as animalesApi, potreros as potrerosApi, sanidad as sanidadApi, etiquetaAnimal, hoyISO,
@@ -15,6 +15,7 @@ import FormAnimal from "@/components/lecheria/forms/FormAnimal"
 import FormPotrero from "@/components/lecheria/forms/FormPotrero"
 import FormSanidad from "@/components/lecheria/forms/FormSanidad"
 import ImportarAnimales from "@/components/lecheria/ImportarAnimales"
+import ImportarGastos from "@/components/lecheria/ImportarGastos"
 import s from "./estilosLecheria"
 import tw from "@/lib/ui"
 import {
@@ -25,7 +26,7 @@ const VERDE = "#3D6B4F"
 
 // Página de ingreso del módulo lechería. Todo lo que escribe datos vive aquí;
 // las vistas (comidas, proveedores, gastos, rebaño, sanidad, calendario) son solo de lectura.
-// URL: /lecheria/registrar?tipo=insumo|proveedor|gasto|animal|potrero|sanidad|importar&id=5
+// URL: /lecheria/registrar?tipo=insumo|proveedor|gasto|animal|potrero|sanidad|importar|importarGastos&id=5
 //      (sanidad acepta además &fecha=2026-11-10 y &animal=3 para prellenar)
 const TABS = [
   { id: "insumo", label: "Alimentos e insumos", icono: ShoppingBasket },
@@ -35,6 +36,7 @@ const TABS = [
   { id: "potrero", label: "Potreros", icono: LandPlot },
   { id: "sanidad", label: "Sanidad", icono: Stethoscope },
   { id: "importar", label: "Importar animales", icono: Upload },
+  { id: "importarGastos", label: "Importar gastos", icono: FileUp },
 ]
 
 export default function IngresoLecheria() {
@@ -56,7 +58,7 @@ export default function IngresoLecheria() {
   const { insumos, proveedores, gastos, animales, potreros, sanidad } = datos
   const catalogo = { insumos, proveedores, animales, potreros }
 
-  const lista = { insumo: insumos, proveedor: proveedores, gasto: gastos, animal: animales, potrero: potreros, sanidad, importar: animales }[tipo]
+  const lista = { insumo: insumos, proveedor: proveedores, gasto: gastos, animal: animales, potrero: potreros, sanidad, importar: animales, importarGastos: gastos }[tipo]
   const editando = id ? lista.find((x) => String(x.id) === id) : null
 
   // Valores iniciales para un registro nuevo (p. ej. día elegido en el calendario)
@@ -108,6 +110,7 @@ export default function IngresoLecheria() {
     potrero: <FormPotrero key={key} {...props} />,
     sanidad: <FormSanidad key={key} {...props} />,
     importar: <ImportarAnimales key={key} catalogo={catalogo} onImportado={recargar} />,
+    importarGastos: <ImportarGastos key={key} catalogo={{ gastos, proveedores }} onImportado={recargar} />,
   }[tipo]
 
   // ---------- Lista de gestión (editar / eliminar) ----------
@@ -121,6 +124,7 @@ export default function IngresoLecheria() {
       potrero: (p) => `${p.nombre} ${p.tipo_pradera ?? ""}`,
       sanidad: (r) => `${etiquetaAnimal(animalDe(r.animal_id))} ${r.tipo} ${r.producto ?? ""}`,
       importar: (a) => `${a.arete} ${a.nombre ?? ""}`,
+      importarGastos: (g) => `${g.descripcion}`,
     }[tipo]
     let r = lista.filter((x) => !t || texto(x).toLowerCase().includes(t))
     if (tipo === "sanidad")
@@ -137,6 +141,7 @@ export default function IngresoLecheria() {
     potrero: ["Potrero", "Superficie", "Ocupación", "Estado", ""],
     sanidad: ["Fecha", "Animal", "Tipo", "Estado", ""],
     importar: [],
+    importarGastos: [],
   }[tipo]
 
   const acciones = (item, texto, api) => (
@@ -257,7 +262,7 @@ export default function IngresoLecheria() {
             ? <div style={s.errorBox}>No se encontró el registro #{id}. <button style={s.btnCancel} onClick={cancelar}>Crear uno nuevo</button></div>
             : formulario}
 
-          {tipo !== "importar" && (
+          {!tipo.startsWith("importar") && (
           <div className="flex flex-col gap-2.5">
             <div className={tw.filtros} style={{ justifyContent: "space-between" }}>
               <h3 style={{ ...s.modalTitle, fontSize: 14 }}>Registros existentes</h3>

@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react"
 import { useSearchParams } from "react-router-dom"
 import { Upload,Pencil, Trash2, Search, ClipboardList, Wrench, Settings, Users,Hammer,AlertTriangle, FileText } from "lucide-react"
-import { arriendos as arriendosApi, maquinas as maquinasApi, servicios as serviciosApi, clientes as clientesApi, fallas as fallasApi, mantenciones_maquinas as mantencionesApi, documentos as documentosApi } from "@/services/maquinaria"
+import { estadoActualMaquinas, conEstadoActual, arriendos as arriendosApi, maquinas as maquinasApi, servicios as serviciosApi, clientes as clientesApi, fallas as fallasApi, mantenciones_maquinas as mantencionesApi, documentos as documentosApi } from "@/services/maquinaria"
 import useCarga from "@/lib/useCarga"
 import { clp, fechaCL, fechaHoraCL, duracionFalla } from "@/lib/formato"
 import EstadoCarga from "@/components/EstadoCarga"
@@ -38,10 +38,11 @@ export default function IngresoMaquinaria() {
   const [q, setQ] = useState("")
 
   const cargarTodo = useCallback(async () => {
-    const [arriendos, maquinas, servicios, clientes] = await Promise.all([
-      arriendosApi.listar(), maquinasApi.listar(), serviciosApi.listar(), clientesApi.listar(),
+    const [arriendos, maquinas, servicios, clientes, estados] = await Promise.all([
+      arriendosApi.listar(), maquinasApi.listar(), serviciosApi.listar(), clientesApi.listar(), estadoActualMaquinas(),
     ])
-    return { arriendos, maquinas, servicios, clientes }
+    // Estado calculado: así el formulario de arriendo bloquea las máquinas que hoy están en mantención o con falla
+    return { arriendos, maquinas: conEstadoActual(maquinas, estados), servicios, clientes }
   }, [])
   const { datos, cargando, error, setError, recargar } = useCarga(cargarTodo, { arriendos: [], maquinas: [], servicios: [], clientes: [] })
   const esExtra = ["falla", "mantencion", "documento"].includes(tipo)
@@ -184,7 +185,7 @@ const inicialNuevo =
       <tr key={x.id} style={marcada}>
         <td className={tw.td}><span style={s.nombre}>{x.nombre}</span><span style={s.rutTxt}>{x.modelo}</span></td>
         <td className={tw.td}>{x.tipo}</td>
-        <td className={tw.td}><span style={{ ...s.badge, ...ESTADO_MAQUINA[x.estado] }}>{x.estado}</span></td>
+        <td className={tw.td}><span style={{ ...s.badge, ...ESTADO_MAQUINA[x.estado] }}>{x.estado}</span>{x.motivoEstado && <span style={s.rutTxt}>{x.motivoEstado}</span>}</td>
         {acciones(x, `¿Eliminar ${x.nombre} ${x.modelo}? También se borrarán sus mantenciones.`, maquinasApi)}
       </tr>
     )

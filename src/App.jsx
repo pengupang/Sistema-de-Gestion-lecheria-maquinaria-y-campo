@@ -23,6 +23,8 @@ import Sanidad from './pages/Sanidad'
 import Genealogia from './pages/Genealogia'
 import IngresoMaquinaria from './pages/IngresoMaquinaria'
 import IngresoLecheria from './pages/IngresoLecheria'
+import VistaMediciones from './pages/VistaMediciones'
+import Notas from './pages/Notas'
 
 function App() {
   return (
@@ -49,6 +51,7 @@ function App() {
             <Route path="facturacion" element={<VistaFacturacion />} />
             <Route path="calendario" element={<VistaCalendarioArriendo />} />
             <Route path='registrar' element={<IngresoMaquinaria/>}/>
+            <Route path='notas' element={<Notas />}/>
             
           </Route>
         </Route>
@@ -66,6 +69,8 @@ function App() {
             <Route path="rebano" element={<RebanoPotreros />} />
             <Route path="sanidad" element={<Sanidad />} />
             <Route path="genealogia" element={<Genealogia />} />
+            <Route path="mediciones" element={<VistaMediciones />} />
+            <Route path="notas" element={<Notas />} />
             <Route path="registrar" element={<IngresoLecheria />} />
           </Route>
         </Route>

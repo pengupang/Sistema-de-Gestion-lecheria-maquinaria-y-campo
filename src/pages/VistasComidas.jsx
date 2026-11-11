@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { Pencil, Plus, AlertTriangle, Search } from "lucide-react"
+import { Pencil, Plus, AlertTriangle, Search, Package, PackageX, Wallet } from "lucide-react"
+import Scorecard from "../components/maquinaria/Scorecard"
 import { insumos as api, proveedores as proveedoresApi } from "../services/lecheria"
 import useCarga from "../lib/useCarga"
 import { clp } from "../lib/formato"
@@ -27,6 +28,8 @@ export default function VistaComidas() {
   const categorias = useMemo(() => [...new Set(items.map((i) => i.categoria).filter(Boolean))].sort(), [items])
 
   const alertas = items.filter((i) => Number(i.stock) <= Number(i.minimo))
+  const sinStock = items.filter((i) => Number(i.stock) === 0).length
+  const valorInventario = items.reduce((t, i) => t + (Number(i.stock) || 0) * (Number(i.precio) || 0), 0)
   const filtrados = items.filter((i) => {
     const t = q.trim().toLowerCase()
     return (!t || i.nombre.toLowerCase().includes(t)) && (!fCategoria || i.categoria === fCategoria) && (!soloAlertas || Number(i.stock) <= Number(i.minimo))
@@ -42,6 +45,13 @@ export default function VistaComidas() {
         <button style={s.btnAdd} onClick={() => navigate("/lecheria/registrar?tipo=insumo")}>
           <Plus size={15} /> Registrar producto
         </button>
+      </div>
+
+      <div className={tw.statsRow}>
+        <Scorecard icono={Package} color="#3D6B4F" bg="#D1FAE5" valor={items.length} etiqueta="Productos registrados" detalle={`${categorias.length} categorías`} />
+        <Scorecard icono={AlertTriangle} color="#92400E" bg="#FEF3C7" valor={alertas.length - sinStock} etiqueta="Con stock bajo" detalle="en o bajo el mínimo" />
+        <Scorecard icono={PackageX} color="#991B1B" bg="#FEE2E2" valor={sinStock} etiqueta="Sin stock" />
+        <Scorecard icono={Wallet} color="#1E40AF" bg="#DBEAFE" valor={clp(valorInventario)} etiqueta="Valor del inventario" detalle="stock × precio unitario" />
       </div>
 
       {alertas.length > 0 && (

@@ -17,8 +17,10 @@ const NOMBRE_MODULO = { maquinaria: "Maquinaria", lecheria: "Lechería" }
 const botonHeader =
   "flex items-center gap-1.5 rounded-md border border-slate-200 px-2.5 py-1.5 text-[13px] text-slate-500 transition-colors hover:bg-slate-50"
 
-export default function LayoutModulo({ modulo, nombre, Icono, navItems, tema, atajos }) {
+export default function LayoutModulo({ modulo, nombre, Icono, navItems: todosLosItems, tema, atajos }) {
   const { perfil, contexto, cambiarEmpresa } = useAuth()
+  // Las opciones marcadas soloAdmin (p. ej. Notas del dueño) se muestran solo a administradores
+  const navItems = todosLosItems.filter((i) => !i.soloAdmin || contexto?.esAdmin || contexto?.esSuperadmin)
   const navigate = useNavigate()
   const location = useLocation()
   const [colapsada, setColapsada] = useState(() => window.innerWidth < 1024)

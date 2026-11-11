@@ -1,9 +1,10 @@
-import { Leaf, ShoppingBasket, Truck, CalendarDays, PieChart, LayoutDashboard, PawPrint, Stethoscope, GitBranch, ClipboardPlus } from "lucide-react"
+import { Leaf, ShoppingBasket, Truck, CalendarDays, PieChart, LayoutDashboard, PawPrint, Stethoscope, GitBranch, ClipboardPlus, Activity, StickyNote } from "lucide-react"
 import LayoutModulo from "./LayoutModulo"
 
 const navItems = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/lecheria/dashboard" },
   { label: "PlantCare", icon: Leaf, path: "/lecheria/plantcare" },
+  { label: "Mediciones", icon: Activity, path: "/lecheria/mediciones" },
   { label: "Comidas", icon: ShoppingBasket, path: "/lecheria/comidas" },
   { label: "Proveedores", icon: Truck, path: "/lecheria/proveedores" },
   { label: "Calendario Animales", icon: CalendarDays, path: "/lecheria/calendario" },
@@ -12,6 +13,7 @@ const navItems = [
   { label: "Sanidad y Manejo", icon: Stethoscope, path: "/lecheria/sanidad" },
   { label: "Genealogía", icon: GitBranch, path: "/lecheria/genealogia" },
   { label: "Registros", icon: ClipboardPlus, path: "/lecheria/registrar" },
+  { label: "Notas", icon: StickyNote, path: "/lecheria/notas", soloAdmin: true },
 ]
 
 // Atajos de la barra inferior en celular (máx. 4; el resto queda en "Más")

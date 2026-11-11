@@ -7,6 +7,7 @@
 import { supabase } from "../lib/supabase"
 import { crud, traerTodo, check, mensajeAmigable } from "./db"
 import { normalizarRut, formatearRut } from "../lib/auth"
+import { calcularEstados, conEstadoActual } from "../lib/estadoMaquina"
 
 export const IVA = 0.19
 
@@ -204,7 +205,8 @@ export async function resumenMaquinaria() {
   const ini = iso(new Date(hoy.getFullYear(), hoy.getMonth(), 1))
   const fin = iso(new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0))
 
-  const [maq, cli, delMes, recientes, mant] = await Promise.all([
+  const hoyStr = hoyISO()
+  const [maq, cli, delMes, recientes, mant, vigentes] = await Promise.all([
     supabase.from("maquinas").select("id, estado"),
     supabase.from("clientes_maquinaria").select("id", { count: "exact", head: true }).eq("activo", true),
     supabase.from("arriendos").select("monto, estado").gte("inicio", ini).lte("inicio", fin),
@@ -222,10 +224,12 @@ export async function resumenMaquinaria() {
       .gte("inicio", hoyISO())
       .order("inicio")
       .limit(5),
+    estadoActualMaquinas(hoyStr),
   ])
   for (const r of [maq, cli, delMes, recientes, mant]) if (r.error) throw new Error(r.error.message)
 
-  const cuenta = (e) => maq.data.filter((m) => m.estado === e).length
+  const conEstado = conEstadoActual(maq.data, vigentes)
+  const cuenta = (e) => conEstado.filter((m) => m.estado === e).length
   return {
     totalMaquinas: maq.data.length,
     disponibles: cuenta("Disponible"),
@@ -266,3 +270,19 @@ export const mantenciones_maquinas = crud("mantenciones_maquinas",{
 })
 
 
+
+// ───────────── Estado actual de las máquinas (calculado) ─────────────
+// Trae solo lo que puede afectar el estado de hoy: arriendos que cubren hoy, mantenciones abiertas y fallas sin cerrar.
+export async function estadoActualMaquinas(hoy = hoyISO()) {
+  const [arr, mant, fal] = await Promise.all([
+    supabase.from("arriendos").select("maquina_id, inicio, fin, estado, cliente:clientes_maquinaria(nombre)").lte("inicio", hoy).gte("fin", hoy),
+    supabase.from("mantenciones_maquinas").select("*").in("estado", ["Programada", "En curso"]),
+    supabase.from("fallas_maquinas").select("maquina_id, inicio, fin").or(`fin.is.null,fin.gt.${new Date().toISOString()}`),
+  ])
+  if (arr.error) throw new Error(mensajeAmigable(arr.error))
+  if (mant.error) throw new Error(mensajeAmigable(mant.error))
+  // fallas_maquinas puede no existir todavía: en ese caso se ignora
+  return calcularEstados({ arriendos: arr.data, mantenciones: mant.data, fallas: fal.error ? [] : fal.data }, hoy)
+}
+
+export { conEstadoActual }

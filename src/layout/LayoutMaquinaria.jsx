@@ -1,4 +1,4 @@
-import { Wrench, FileText, BarChart2, Settings, Users, CalendarRange, ClipboardPlus } from "lucide-react"
+import { Wrench, FileText, BarChart2, Settings, Users, CalendarRange, ClipboardPlus, StickyNote } from "lucide-react"
 import LayoutModulo from "./LayoutModulo"
 
 const navItems = [
@@ -11,6 +11,7 @@ const navItems = [
   { label: "Calendario", icon: CalendarRange, path: "/maquinaria/calendario" },
   { label: "Datos Históricos", icon: BarChart2, path: "/maquinaria/historicos" },
   { label: "Registros", icon: ClipboardPlus, path: "/maquinaria/registrar" },
+  { label: "Notas", icon: StickyNote, path: "/maquinaria/notas", soloAdmin: true },
 ]
 
 // Atajos de la barra inferior en celular (máx. 4; el resto queda en "Más")

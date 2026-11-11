@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 import { useSearchParams } from "react-router-dom"
 import { AlertTriangle } from "lucide-react"
 import { animales as animalesApi, etiquetaAnimal } from "../services/lecheria"
-import { construirPedigri, crias, hermanos, ancestrosComunes, descendientes } from "../lib/genealogia"
+import { crias, ancestrosComunes } from "../lib/genealogia"
 import s from "./estilosLecheria"
 import tw from "@/lib/ui"
 
@@ -11,11 +11,10 @@ const COLORES = {
   hembra: { bg: "#FCE7F3", borde: "#F9A8D4", texto: "#9D174D" },
   macho: { bg: "#DBEAFE", borde: "#93C5FD", texto: "#1E40AF" },
 }
-const ROL = { animal: "Animal", padre: "Padre", madre: "Madre" }
-const ALTO_SLOT = 76
+const ROL = { animal: "Animal", padre: "Padre", madre: "Madre", cria: "Cría" }
 const anio = (iso) => (iso ? iso.slice(0, 4) : "s/f")
 
-function Tarjeta({ slot, onSelect, destacada }) {
+function Tarjeta({ slot, onSelect, destacada, nota }) {
   const { animal, externo, rol } = slot
   if (!animal) {
     return (
@@ -43,19 +42,21 @@ function Tarjeta({ slot, onSelect, destacada }) {
       <span style={etiquetaRol}>{ROL[rol]}{animal.estado === "baja" ? " · baja" : ""}</span>
       <span style={{ fontSize: 13, fontWeight: 700 }}>{etiquetaAnimal(animal)}</span>
       <span style={{ fontSize: 11 }}>{CATEGORIAS[animal.categoria]} · {anio(animal.fecha_nacimiento)}</span>
+      {nota && <span style={{ fontSize: 10.5, opacity: 0.8 }}>{nota}</span>}
     </div>
   )
 }
 
-const caja = { display: "flex", flexDirection: "column", gap: 2, padding: "8px 10px", borderRadius: 8, border: "1px solid", minWidth: 150, boxSizing: "border-box", height: ALTO_SLOT - 10, justifyContent: "center" }
+const caja = { display: "flex", flexDirection: "column", gap: 2, padding: "8px 12px", borderRadius: 8, border: "1px solid", width: 170, minHeight: 66, boxSizing: "border-box", justifyContent: "center", textAlign: "center" }
 const etiquetaRol = { fontSize: 10, textTransform: "uppercase", letterSpacing: "0.05em", opacity: 0.75 }
 
+// Árbol familiar simple: padres arriba, el animal al centro y sus crías abajo.
+// Si el animal no tiene crías (por ejemplo, una cría), se muestran solo sus padres.
 export default function Genealogia() {
   const [params, setParams] = useSearchParams()
   const [animales, setAnimales] = useState([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState(null)
-  const [generaciones, setGeneraciones] = useState(3)
 
   useEffect(() => {
     animalesApi
@@ -69,44 +70,33 @@ export default function Genealogia() {
   const animal = animales.find((a) => a.id === paramId) ?? animales[0]
   const seleccionar = (id) => setParams({ animal: String(id) })
 
-  const niveles = useMemo(
-    () => (animal ? construirPedigri(animales, animal.id, generaciones) : []),
-    [animales, animal, generaciones]
-  )
-  const comunes = animal ? ancestrosComunes(animales, animal.madre_id, animal.padre_id) : []
-  const listaCrias = animal ? crias(animales, animal.id).sort((a, b) => (b.fecha_nacimiento ?? "").localeCompare(a.fecha_nacimiento ?? "")) : []
-  const listaHermanos = animal ? hermanos(animales, animal) : []
-  const totalDesc = animal ? descendientes(animales, animal.id).size : 0
-  const otroProgenitor = (c) => {
-    const otroId = c.madre_id === animal.id ? c.padre_id : c.madre_id
-    const otro = animales.find((a) => a.id === otroId)
-    if (otro) return etiquetaAnimal(otro)
-    return c.madre_id === animal.id ? c.padre_externo || "Desconocido" : "Desconocida"
-  }
-  const parentesco = (h) => {
-    const mismaMadre = animal.madre_id && h.madre_id === animal.madre_id
-    const mismoPadre = animal.padre_id && h.padre_id === animal.padre_id
-    return mismaMadre && mismoPadre ? "Hermano completo" : mismaMadre ? "Misma madre" : "Mismo padre"
-  }
-
   if (cargando) return <p style={s.sub}>Cargando...</p>
   if (!animal) return <p style={s.sub}>Aún no hay animales registrados. Agrégalos en Rebaño y Potreros.</p>
+
+  const buscar = (id) => (id ? animales.find((a) => a.id === id) ?? null : null)
+  const padre = buscar(animal.padre_id)
+  const madre = buscar(animal.madre_id)
+  const comunes = ancestrosComunes(animales, animal.madre_id, animal.padre_id)
+  const listaCrias = crias(animales, animal.id).sort((a, b) => (a.fecha_nacimiento ?? "").localeCompare(b.fecha_nacimiento ?? ""))
+  const otroProgenitor = (c) => {
+    const otroId = c.madre_id === animal.id ? c.padre_id : c.madre_id
+    const otro = buscar(otroId)
+    if (otro) return `con ${etiquetaAnimal(otro)}`
+    if (c.madre_id === animal.id && c.padre_externo) return `con ${c.padre_externo} (externo)`
+    return null
+  }
+  const linea = <div className="mx-auto h-6 w-px bg-slate-300" />
 
   return (
     <div className={tw.container}>
       <div className={tw.topBar}>
         <div>
           <h2 style={s.title}>Genealogía</h2>
-          <p style={s.sub}>Ascendencia, descendencia y parentesco · se edita desde Rebaño y Potreros</p>
+          <p style={s.sub}>Padres y crías de cada animal · se edita desde Registrar → Animales</p>
         </div>
-        <div className={tw.filtros}>
-          <select style={s.select} value={animal.id} onChange={(e) => seleccionar(Number(e.target.value))}>
-            {animales.map((a) => <option key={a.id} value={a.id}>{etiquetaAnimal(a)}</option>)}
-          </select>
-          <select style={s.select} value={generaciones} onChange={(e) => setGeneraciones(Number(e.target.value))}>
-            {[2, 3, 4].map((g) => <option key={g} value={g}>{g} generaciones</option>)}
-          </select>
-        </div>
+        <select style={s.select} value={animal.id} onChange={(e) => seleccionar(Number(e.target.value))}>
+          {animales.map((a) => <option key={a.id} value={a.id}>{etiquetaAnimal(a)}</option>)}
+        </select>
       </div>
 
       {error && <div style={s.errorBox}>{error}</div>}
@@ -115,70 +105,42 @@ export default function Genealogia() {
         <div style={s.alertBox}>
           <AlertTriangle size={16} color="#D97706" />
           <span>
-            <strong>Posible consanguinidad:</strong> la madre y el padre de {etiquetaAnimal(animal)} comparten ancestros ({comunes.map(etiquetaAnimal).join(", ")}).
+            <strong>Posible consanguinidad:</strong> la madre y el padre de {etiquetaAnimal(animal)} están emparentados (comparten {comunes.map(etiquetaAnimal).join(", ")}).
           </span>
         </div>
       )}
 
-      <div className={tw.statsRow}>
-        <div style={s.stat}><p style={s.statValue}>{listaCrias.length}</p><p style={s.statLabel}>Crías directas</p></div>
-        <div style={s.stat}><p style={s.statValue}>{totalDesc}</p><p style={s.statLabel}>Descendientes totales</p></div>
-        <div style={s.stat}><p style={s.statValue}>{listaHermanos.length}</p><p style={s.statLabel}>Hermanos y medios hermanos</p></div>
-      </div>
+      <div className={tw.tableCard} style={{ padding: "20px 16px" }}>
+        <div className="flex min-w-max flex-col items-center">
+          {/* Padres */}
+          <p style={{ ...s.label, textAlign: "center" }}>Padres</p>
+          <div className="flex justify-center gap-4">
+            <Tarjeta slot={{ animal: padre, externo: padre ? null : animal.padre_externo || null, rol: "padre" }} onSelect={seleccionar} />
+            <Tarjeta slot={{ animal: madre, externo: null, rol: "madre" }} onSelect={seleccionar} />
+          </div>
+          {linea}
 
-      {/* Pedigrí: de izquierda (animal) a derecha (ancestros más lejanos) */}
-      <div className={tw.tableCard} style={{ padding: 16 }}>
-        <div style={{ display: "flex", gap: 24, minWidth: "max-content" }}>
-          {niveles.map((slots, g) => (
-            <div key={g} style={{ display: "flex", flexDirection: "column" }}>
-              <p style={{ ...s.label, textAlign: "center" }}>
-                {["Animal", "Padres", "Abuelos", "Bisabuelos", "Tatarabuelos"][g]}
-              </p>
-              <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-around", height: niveles[niveles.length - 1].length * ALTO_SLOT }}>
-                {slots.map((slot, i) => (
-                  <Tarjeta key={i} slot={slot} onSelect={seleccionar} destacada={g === 0} />
+          {/* Animal */}
+          <Tarjeta slot={{ animal, externo: null, rol: "animal" }} destacada />
+
+          {/* Crías (solo si tiene) */}
+          {listaCrias.length > 0 ? (
+            <>
+              {linea}
+              <p style={{ ...s.label, textAlign: "center" }}>Crías ({listaCrias.length})</p>
+              <div className="flex max-w-[760px] flex-wrap justify-center gap-3">
+                {listaCrias.map((c) => (
+                  <Tarjeta key={c.id} slot={{ animal: c, externo: null, rol: "cria" }} onSelect={seleccionar} nota={otroProgenitor(c)} />
                 ))}
               </div>
-            </div>
-          ))}
+            </>
+          ) : (
+            <p style={{ ...s.sub, marginTop: 12 }}>Sin crías registradas.</p>
+          )}
         </div>
-        <p style={{ ...s.sub, marginTop: 12 }}>Haz clic en un ancestro para ver su propia genealogía. Punteado = desconocido o fuera del sistema.</p>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 16 }}>
-        <div className={tw.tableCard}>
-          <p style={{ ...s.nombre, padding: "14px 16px 0" }}>Crías de {etiquetaAnimal(animal)}</p>
-          <table className={tw.table} style={{ minWidth: 0 }}>
-            <thead><tr>{["Cría", "Nacimiento", "Otro progenitor"].map((h) => <th key={h} className={tw.th}>{h}</th>)}</tr></thead>
-            <tbody>
-              {listaCrias.map((c) => (
-                <tr key={c.id} style={{ cursor: "pointer" }} onClick={() => seleccionar(c.id)}>
-                  <td className={tw.td}><span style={s.nombre}>{etiquetaAnimal(c)}</span></td>
-                  <td className={tw.td}>{c.fecha_nacimiento ? c.fecha_nacimiento.split("-").reverse().join("/") : "—"}</td>
-                  <td className={tw.td}>{otroProgenitor(c)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {listaCrias.length === 0 && <p style={s.vacio}>Sin crías registradas.</p>}
-        </div>
-
-        <div className={tw.tableCard}>
-          <p style={{ ...s.nombre, padding: "14px 16px 0" }}>Hermanos</p>
-          <table className={tw.table} style={{ minWidth: 0 }}>
-            <thead><tr>{["Animal", "Nacimiento", "Parentesco"].map((h) => <th key={h} className={tw.th}>{h}</th>)}</tr></thead>
-            <tbody>
-              {listaHermanos.map((h) => (
-                <tr key={h.id} style={{ cursor: "pointer" }} onClick={() => seleccionar(h.id)}>
-                  <td className={tw.td}><span style={s.nombre}>{etiquetaAnimal(h)}</span></td>
-                  <td className={tw.td}>{h.fecha_nacimiento ? h.fecha_nacimiento.split("-").reverse().join("/") : "—"}</td>
-                  <td className={tw.td}>{parentesco(h)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {listaHermanos.length === 0 && <p style={s.vacio}>Sin hermanos registrados.</p>}
-        </div>
+        <p style={{ ...s.sub, marginTop: 16, textAlign: "center" }}>
+          Haz clic en un padre o en una cría para ver su familia. Punteado = desconocido o fuera del predio.
+        </p>
       </div>
     </div>
   )

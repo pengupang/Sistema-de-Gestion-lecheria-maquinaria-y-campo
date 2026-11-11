@@ -11,7 +11,7 @@ export function Campo({ label, full, children }) {
   )
 }
 
-// Mismas props que ModalLecheria, pero se dibuja como tarjeta dentro de la página (sin overlay).
+// Tarjeta de formulario dentro de la página (los formularios ya no usan modales).
 // `onCancel` limpia el formulario o vuelve atrás; si no se pasa, no se muestra el botón Cancelar.
 export default function TarjetaFormulario({ titulo, subtitulo, onCancel, onSave, error, guardando, color, children }) {
   return (

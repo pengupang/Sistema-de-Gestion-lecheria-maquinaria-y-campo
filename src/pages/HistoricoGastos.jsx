@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom"
 import { Plus, Pencil, TrendingUp, TrendingDown, DollarSign, ShoppingCart } from "lucide-react"
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts"
 import { gastos as api, proveedores as proveedoresApi } from "../services/lecheria"
+import { descargarCSV } from "../lib/exportar"
 import useCarga from "../lib/useCarga"
 import { clp, fechaCL, MESES_CORTO as MESES } from "../lib/formato"
 import EstadoCarga from "../components/EstadoCarga"
@@ -78,6 +79,18 @@ export default function VistaHistoricosGastos() {
             <option value="todos">Todos los años</option>
             {anios.map((a) => <option key={a} value={a}>{a}</option>)}
           </select>
+          <button style={s.btnCancel}
+            onClick={() => descargarCSV(`gastos-${anio}${filtroCategoria !== "Todos" ? "-" + filtroCategoria : ""}`, [
+              { titulo: "Fecha", valor: (g) => g.fecha.split("-").reverse().join("-") },
+              { titulo: "Categoría", valor: (g) => g.categoria },
+              { titulo: "Descripción", valor: (g) => g.descripcion },
+              { titulo: "Monto", valor: (g) => g.monto },
+              { titulo: "Proveedor", valor: (g) => nombreProveedor(g.proveedor_id) ?? "" },
+              { titulo: "Documento", valor: (g) => g.documento ?? "" },
+            ], gastosFiltrados)}>
+            Exportar a Excel
+          </button>
+          <button style={s.btnCancel} onClick={() => navigate("/lecheria/registrar?tipo=importarGastos")}>Importar</button>
           <button style={styles.btnAdd} onClick={() => navigate("/lecheria/registrar?tipo=gasto")}>
             <Plus size={15} /> Registrar gasto
           </button>

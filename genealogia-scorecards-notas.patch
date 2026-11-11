@@ -1,0 +1,701 @@
+diff --git a/src/App.jsx b/src/App.jsx
+index f4e4d0a..23492e8 100644
+--- a/src/App.jsx
++++ b/src/App.jsx
+@@ -24,6 +24,7 @@ import Genealogia from './pages/Genealogia'
+ import IngresoMaquinaria from './pages/IngresoMaquinaria'
+ import IngresoLecheria from './pages/IngresoLecheria'
+ import VistaMediciones from './pages/VistaMediciones'
++import Notas from './pages/Notas'
+ 
+ function App() {
+   return (
+@@ -50,6 +51,7 @@ function App() {
+             <Route path="facturacion" element={<VistaFacturacion />} />
+             <Route path="calendario" element={<VistaCalendarioArriendo />} />
+             <Route path='registrar' element={<IngresoMaquinaria/>}/>
++            <Route path='notas' element={<Notas />}/>
+             
+           </Route>
+         </Route>
+@@ -68,6 +70,7 @@ function App() {
+             <Route path="sanidad" element={<Sanidad />} />
+             <Route path="genealogia" element={<Genealogia />} />
+             <Route path="mediciones" element={<VistaMediciones />} />
++            <Route path="notas" element={<Notas />} />
+             <Route path="registrar" element={<IngresoLecheria />} />
+           </Route>
+         </Route>
+diff --git a/src/layout/LayoutLecheria.jsx b/src/layout/LayoutLecheria.jsx
+index 93abbe9..a980b8d 100644
+--- a/src/layout/LayoutLecheria.jsx
++++ b/src/layout/LayoutLecheria.jsx
+@@ -1,4 +1,4 @@
+-import { Leaf, ShoppingBasket, Truck, CalendarDays, PieChart, LayoutDashboard, PawPrint, Stethoscope, GitBranch, ClipboardPlus, Activity } from "lucide-react"
++import { Leaf, ShoppingBasket, Truck, CalendarDays, PieChart, LayoutDashboard, PawPrint, Stethoscope, GitBranch, ClipboardPlus, Activity, StickyNote } from "lucide-react"
+ import LayoutModulo from "./LayoutModulo"
+ 
+ const navItems = [
+@@ -13,6 +13,7 @@ const navItems = [
+   { label: "Sanidad y Manejo", icon: Stethoscope, path: "/lecheria/sanidad" },
+   { label: "Genealogía", icon: GitBranch, path: "/lecheria/genealogia" },
+   { label: "Registros", icon: ClipboardPlus, path: "/lecheria/registrar" },
++  { label: "Notas", icon: StickyNote, path: "/lecheria/notas", soloAdmin: true },
+ ]
+ 
+ // Atajos de la barra inferior en celular (máx. 4; el resto queda en "Más")
+diff --git a/src/layout/LayoutMaquinaria.jsx b/src/layout/LayoutMaquinaria.jsx
+index a38748f..4482a5d 100644
+--- a/src/layout/LayoutMaquinaria.jsx
++++ b/src/layout/LayoutMaquinaria.jsx
+@@ -1,4 +1,4 @@
+-import { Wrench, FileText, BarChart2, Settings, Users, CalendarRange, ClipboardPlus } from "lucide-react"
++import { Wrench, FileText, BarChart2, Settings, Users, CalendarRange, ClipboardPlus, StickyNote } from "lucide-react"
+ import LayoutModulo from "./LayoutModulo"
+ 
+ const navItems = [
+@@ -11,6 +11,7 @@ const navItems = [
+   { label: "Calendario", icon: CalendarRange, path: "/maquinaria/calendario" },
+   { label: "Datos Históricos", icon: BarChart2, path: "/maquinaria/historicos" },
+   { label: "Registros", icon: ClipboardPlus, path: "/maquinaria/registrar" },
++  { label: "Notas", icon: StickyNote, path: "/maquinaria/notas", soloAdmin: true },
+ ]
+ 
+ // Atajos de la barra inferior en celular (máx. 4; el resto queda en "Más")
+diff --git a/src/layout/LayoutModulo.jsx b/src/layout/LayoutModulo.jsx
+index 104b301..3adb840 100644
+--- a/src/layout/LayoutModulo.jsx
++++ b/src/layout/LayoutModulo.jsx
+@@ -17,8 +17,10 @@ const NOMBRE_MODULO = { maquinaria: "Maquinaria", lecheria: "Lechería" }
+ const botonHeader =
+   "flex items-center gap-1.5 rounded-md border border-slate-200 px-2.5 py-1.5 text-[13px] text-slate-500 transition-colors hover:bg-slate-50"
+ 
+-export default function LayoutModulo({ modulo, nombre, Icono, navItems, tema, atajos }) {
++export default function LayoutModulo({ modulo, nombre, Icono, navItems: todosLosItems, tema, atajos }) {
+   const { perfil, contexto, cambiarEmpresa } = useAuth()
++  // Las opciones marcadas soloAdmin (p. ej. Notas del dueño) se muestran solo a administradores
++  const navItems = todosLosItems.filter((i) => !i.soloAdmin || contexto?.esAdmin || contexto?.esSuperadmin)
+   const navigate = useNavigate()
+   const location = useLocation()
+   const [colapsada, setColapsada] = useState(() => window.innerWidth < 1024)
+diff --git a/src/pages/Genealogia.jsx b/src/pages/Genealogia.jsx
+index 2ea78ae..22ba4d6 100644
+--- a/src/pages/Genealogia.jsx
++++ b/src/pages/Genealogia.jsx
+@@ -1,8 +1,8 @@
+-import { useEffect, useMemo, useState } from "react"
++import { useEffect, useState } from "react"
+ import { useSearchParams } from "react-router-dom"
+ import { AlertTriangle } from "lucide-react"
+ import { animales as animalesApi, etiquetaAnimal } from "../services/lecheria"
+-import { construirPedigri, crias, hermanos, ancestrosComunes, descendientes } from "../lib/genealogia"
++import { crias, ancestrosComunes } from "../lib/genealogia"
+ import s from "./estilosLecheria"
+ import tw from "@/lib/ui"
+ 
+@@ -11,11 +11,10 @@ const COLORES = {
+   hembra: { bg: "#FCE7F3", borde: "#F9A8D4", texto: "#9D174D" },
+   macho: { bg: "#DBEAFE", borde: "#93C5FD", texto: "#1E40AF" },
+ }
+-const ROL = { animal: "Animal", padre: "Padre", madre: "Madre" }
+-const ALTO_SLOT = 76
++const ROL = { animal: "Animal", padre: "Padre", madre: "Madre", cria: "Cría" }
+ const anio = (iso) => (iso ? iso.slice(0, 4) : "s/f")
+ 
+-function Tarjeta({ slot, onSelect, destacada }) {
++function Tarjeta({ slot, onSelect, destacada, nota }) {
+   const { animal, externo, rol } = slot
+   if (!animal) {
+     return (
+@@ -43,19 +42,21 @@ function Tarjeta({ slot, onSelect, destacada }) {
+       <span style={etiquetaRol}>{ROL[rol]}{animal.estado === "baja" ? " · baja" : ""}</span>
+       <span style={{ fontSize: 13, fontWeight: 700 }}>{etiquetaAnimal(animal)}</span>
+       <span style={{ fontSize: 11 }}>{CATEGORIAS[animal.categoria]} · {anio(animal.fecha_nacimiento)}</span>
++      {nota && <span style={{ fontSize: 10.5, opacity: 0.8 }}>{nota}</span>}
+     </div>
+   )
+ }
+ 
+-const caja = { display: "flex", flexDirection: "column", gap: 2, padding: "8px 10px", borderRadius: 8, border: "1px solid", minWidth: 150, boxSizing: "border-box", height: ALTO_SLOT - 10, justifyContent: "center" }
++const caja = { display: "flex", flexDirection: "column", gap: 2, padding: "8px 12px", borderRadius: 8, border: "1px solid", width: 170, minHeight: 66, boxSizing: "border-box", justifyContent: "center", textAlign: "center" }
+ const etiquetaRol = { fontSize: 10, textTransform: "uppercase", letterSpacing: "0.05em", opacity: 0.75 }
+ 
++// Árbol familiar simple: padres arriba, el animal al centro y sus crías abajo.
++// Si el animal no tiene crías (por ejemplo, una cría), se muestran solo sus padres.
+ export default function Genealogia() {
+   const [params, setParams] = useSearchParams()
+   const [animales, setAnimales] = useState([])
+   const [cargando, setCargando] = useState(true)
+   const [error, setError] = useState(null)
+-  const [generaciones, setGeneraciones] = useState(3)
+ 
+   useEffect(() => {
+     animalesApi
+@@ -69,44 +70,33 @@ export default function Genealogia() {
+   const animal = animales.find((a) => a.id === paramId) ?? animales[0]
+   const seleccionar = (id) => setParams({ animal: String(id) })
+ 
+-  const niveles = useMemo(
+-    () => (animal ? construirPedigri(animales, animal.id, generaciones) : []),
+-    [animales, animal, generaciones]
+-  )
+-  const comunes = animal ? ancestrosComunes(animales, animal.madre_id, animal.padre_id) : []
+-  const listaCrias = animal ? crias(animales, animal.id).sort((a, b) => (b.fecha_nacimiento ?? "").localeCompare(a.fecha_nacimiento ?? "")) : []
+-  const listaHermanos = animal ? hermanos(animales, animal) : []
+-  const totalDesc = animal ? descendientes(animales, animal.id).size : 0
++  if (cargando) return <p style={s.sub}>Cargando...</p>
++  if (!animal) return <p style={s.sub}>Aún no hay animales registrados. Agrégalos en Rebaño y Potreros.</p>
++
++  const buscar = (id) => (id ? animales.find((a) => a.id === id) ?? null : null)
++  const padre = buscar(animal.padre_id)
++  const madre = buscar(animal.madre_id)
++  const comunes = ancestrosComunes(animales, animal.madre_id, animal.padre_id)
++  const listaCrias = crias(animales, animal.id).sort((a, b) => (a.fecha_nacimiento ?? "").localeCompare(b.fecha_nacimiento ?? ""))
+   const otroProgenitor = (c) => {
+     const otroId = c.madre_id === animal.id ? c.padre_id : c.madre_id
+-    const otro = animales.find((a) => a.id === otroId)
+-    if (otro) return etiquetaAnimal(otro)
+-    return c.madre_id === animal.id ? c.padre_externo || "Desconocido" : "Desconocida"
++    const otro = buscar(otroId)
++    if (otro) return `con ${etiquetaAnimal(otro)}`
++    if (c.madre_id === animal.id && c.padre_externo) return `con ${c.padre_externo} (externo)`
++    return null
+   }
+-  const parentesco = (h) => {
+-    const mismaMadre = animal.madre_id && h.madre_id === animal.madre_id
+-    const mismoPadre = animal.padre_id && h.padre_id === animal.padre_id
+-    return mismaMadre && mismoPadre ? "Hermano completo" : mismaMadre ? "Misma madre" : "Mismo padre"
+-  }
+-
+-  if (cargando) return <p style={s.sub}>Cargando...</p>
+-  if (!animal) return <p style={s.sub}>Aún no hay animales registrados. Agrégalos en Rebaño y Potreros.</p>
++  const linea = <div className="mx-auto h-6 w-px bg-slate-300" />
+ 
+   return (
+     <div className={tw.container}>
+       <div className={tw.topBar}>
+         <div>
+           <h2 style={s.title}>Genealogía</h2>
+-          <p style={s.sub}>Ascendencia, descendencia y parentesco · se edita desde Rebaño y Potreros</p>
+-        </div>
+-        <div className={tw.filtros}>
+-          <select style={s.select} value={animal.id} onChange={(e) => seleccionar(Number(e.target.value))}>
+-            {animales.map((a) => <option key={a.id} value={a.id}>{etiquetaAnimal(a)}</option>)}
+-          </select>
+-          <select style={s.select} value={generaciones} onChange={(e) => setGeneraciones(Number(e.target.value))}>
+-            {[2, 3, 4].map((g) => <option key={g} value={g}>{g} generaciones</option>)}
+-          </select>
++          <p style={s.sub}>Padres y crías de cada animal · se edita desde Registrar → Animales</p>
+         </div>
++        <select style={s.select} value={animal.id} onChange={(e) => seleccionar(Number(e.target.value))}>
++          {animales.map((a) => <option key={a.id} value={a.id}>{etiquetaAnimal(a)}</option>)}
++        </select>
+       </div>
+ 
+       {error && <div style={s.errorBox}>{error}</div>}
+@@ -115,70 +105,42 @@ export default function Genealogia() {
+         <div style={s.alertBox}>
+           <AlertTriangle size={16} color="#D97706" />
+           <span>
+-            <strong>Posible consanguinidad:</strong> la madre y el padre de {etiquetaAnimal(animal)} comparten ancestros ({comunes.map(etiquetaAnimal).join(", ")}).
++            <strong>Posible consanguinidad:</strong> la madre y el padre de {etiquetaAnimal(animal)} están emparentados (comparten {comunes.map(etiquetaAnimal).join(", ")}).
+           </span>
+         </div>
+       )}
+ 
+-      <div className={tw.statsRow}>
+-        <div style={s.stat}><p style={s.statValue}>{listaCrias.length}</p><p style={s.statLabel}>Crías directas</p></div>
+-        <div style={s.stat}><p style={s.statValue}>{totalDesc}</p><p style={s.statLabel}>Descendientes totales</p></div>
+-        <div style={s.stat}><p style={s.statValue}>{listaHermanos.length}</p><p style={s.statLabel}>Hermanos y medios hermanos</p></div>
+-      </div>
++      <div className={tw.tableCard} style={{ padding: "20px 16px" }}>
++        <div className="flex min-w-max flex-col items-center">
++          {/* Padres */}
++          <p style={{ ...s.label, textAlign: "center" }}>Padres</p>
++          <div className="flex justify-center gap-4">
++            <Tarjeta slot={{ animal: padre, externo: padre ? null : animal.padre_externo || null, rol: "padre" }} onSelect={seleccionar} />
++            <Tarjeta slot={{ animal: madre, externo: null, rol: "madre" }} onSelect={seleccionar} />
++          </div>
++          {linea}
+ 
+-      {/* Pedigrí: de izquierda (animal) a derecha (ancestros más lejanos) */}
+-      <div className={tw.tableCard} style={{ padding: 16 }}>
+-        <div style={{ display: "flex", gap: 24, minWidth: "max-content" }}>
+-          {niveles.map((slots, g) => (
+-            <div key={g} style={{ display: "flex", flexDirection: "column" }}>
+-              <p style={{ ...s.label, textAlign: "center" }}>
+-                {["Animal", "Padres", "Abuelos", "Bisabuelos", "Tatarabuelos"][g]}
+-              </p>
+-              <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-around", height: niveles[niveles.length - 1].length * ALTO_SLOT }}>
+-                {slots.map((slot, i) => (
+-                  <Tarjeta key={i} slot={slot} onSelect={seleccionar} destacada={g === 0} />
++          {/* Animal */}
++          <Tarjeta slot={{ animal, externo: null, rol: "animal" }} destacada />
++
++          {/* Crías (solo si tiene) */}
++          {listaCrias.length > 0 ? (
++            <>
++              {linea}
++              <p style={{ ...s.label, textAlign: "center" }}>Crías ({listaCrias.length})</p>
++              <div className="flex max-w-[760px] flex-wrap justify-center gap-3">
++                {listaCrias.map((c) => (
++                  <Tarjeta key={c.id} slot={{ animal: c, externo: null, rol: "cria" }} onSelect={seleccionar} nota={otroProgenitor(c)} />
+                 ))}
+               </div>
+-            </div>
+-          ))}
+-        </div>
+-        <p style={{ ...s.sub, marginTop: 12 }}>Haz clic en un ancestro para ver su propia genealogía. Punteado = desconocido o fuera del sistema.</p>
+-      </div>
+-
+-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 16 }}>
+-        <div className={tw.tableCard}>
+-          <p style={{ ...s.nombre, padding: "14px 16px 0" }}>Crías de {etiquetaAnimal(animal)}</p>
+-          <table className={tw.table} style={{ minWidth: 0 }}>
+-            <thead><tr>{["Cría", "Nacimiento", "Otro progenitor"].map((h) => <th key={h} className={tw.th}>{h}</th>)}</tr></thead>
+-            <tbody>
+-              {listaCrias.map((c) => (
+-                <tr key={c.id} style={{ cursor: "pointer" }} onClick={() => seleccionar(c.id)}>
+-                  <td className={tw.td}><span style={s.nombre}>{etiquetaAnimal(c)}</span></td>
+-                  <td className={tw.td}>{c.fecha_nacimiento ? c.fecha_nacimiento.split("-").reverse().join("/") : "—"}</td>
+-                  <td className={tw.td}>{otroProgenitor(c)}</td>
+-                </tr>
+-              ))}
+-            </tbody>
+-          </table>
+-          {listaCrias.length === 0 && <p style={s.vacio}>Sin crías registradas.</p>}
+-        </div>
+-
+-        <div className={tw.tableCard}>
+-          <p style={{ ...s.nombre, padding: "14px 16px 0" }}>Hermanos</p>
+-          <table className={tw.table} style={{ minWidth: 0 }}>
+-            <thead><tr>{["Animal", "Nacimiento", "Parentesco"].map((h) => <th key={h} className={tw.th}>{h}</th>)}</tr></thead>
+-            <tbody>
+-              {listaHermanos.map((h) => (
+-                <tr key={h.id} style={{ cursor: "pointer" }} onClick={() => seleccionar(h.id)}>
+-                  <td className={tw.td}><span style={s.nombre}>{etiquetaAnimal(h)}</span></td>
+-                  <td className={tw.td}>{h.fecha_nacimiento ? h.fecha_nacimiento.split("-").reverse().join("/") : "—"}</td>
+-                  <td className={tw.td}>{parentesco(h)}</td>
+-                </tr>
+-              ))}
+-            </tbody>
+-          </table>
+-          {listaHermanos.length === 0 && <p style={s.vacio}>Sin hermanos registrados.</p>}
++            </>
++          ) : (
++            <p style={{ ...s.sub, marginTop: 12 }}>Sin crías registradas.</p>
++          )}
+         </div>
++        <p style={{ ...s.sub, marginTop: 16, textAlign: "center" }}>
++          Haz clic en un padre o en una cría para ver su familia. Punteado = desconocido o fuera del predio.
++        </p>
+       </div>
+     </div>
+   )
+diff --git a/src/pages/Notas.jsx b/src/pages/Notas.jsx
+new file mode 100644
+index 0000000..935f593
+--- /dev/null
++++ b/src/pages/Notas.jsx
+@@ -0,0 +1,205 @@
++import { useMemo, useState } from "react"
++import { useLocation } from "react-router-dom"
++import { Pin, PinOff, Check, RotateCcw, Pencil, Trash2, Search, Bell, StickyNote } from "lucide-react"
++import { notas as api, faltaTablaNotas } from "@/services/notas"
++import useCarga from "@/lib/useCarga"
++import EstadoCarga from "@/components/EstadoCarga"
++import tw from "@/lib/ui"
++
++// Notas y recordatorios del dueño. Se usa en los dos módulos (/maquinaria/notas y /lecheria/notas);
++// cada nota puede quedar asociada al módulo donde se escribió o ser general.
++const COLORES = {
++  amarillo: { bg: "#FEF9C3", borde: "#FDE68A" },
++  verde: { bg: "#DCFCE7", borde: "#BBF7D0" },
++  azul: { bg: "#DBEAFE", borde: "#BFDBFE" },
++  rosa: { bg: "#FCE7F3", borde: "#FBCFE8" },
++  gris: { bg: "#F1F5F9", borde: "#E2E8F0" },
++}
++const NOMBRE_MODULO = { maquinaria: "Maquinaria", lecheria: "Lechería" }
++const hoyISO = () => {
++  const d = new Date()
++  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
++}
++const fechaCorta = (iso) => (iso ? iso.split("-").reverse().join("/") : "")
++const vacia = (modulo) => ({ titulo: "", contenido: "", color: "amarillo", recordar_el: "", modulo })
++
++const input = "w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-700 outline-none focus:border-slate-400"
++const boton = "rounded-md border border-slate-200 bg-white px-3 py-1.5 text-[13px] text-slate-600 hover:bg-slate-50"
++
++function Editor({ inicial, onGuardar, onCancelar, guardando, textoBoton }) {
++  const [f, setF] = useState(inicial)
++  const campo = (k, v) => setF((x) => ({ ...x, [k]: v }))
++  const guardar = () => { if (f.titulo.trim() || f.contenido.trim()) onGuardar(f) }
++  return (
++    <div className="flex flex-col gap-2">
++      <input className={input} placeholder="Título (opcional)" value={f.titulo} onChange={(e) => campo("titulo", e.target.value)} />
++      <textarea className={`${input} min-h-[80px] resize-y`} placeholder="Escribe una nota o un pendiente…" value={f.contenido}
++        onChange={(e) => campo("contenido", e.target.value)}
++        onKeyDown={(e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) guardar() }} />
++      <div className="flex flex-wrap items-center gap-2">
++        <label className="flex items-center gap-1.5 text-[12px] text-slate-500">
++          <Bell size={13} /> Recordar el
++          <input type="date" className="rounded-md border border-slate-200 px-2 py-1 text-[12px]" value={f.recordar_el ?? ""}
++            onChange={(e) => campo("recordar_el", e.target.value)} />
++        </label>
++        <div className="flex gap-1">
++          {Object.entries(COLORES).map(([k, c]) => (
++            <button key={k} type="button" title={k} onClick={() => campo("color", k)}
++              className="h-5 w-5 rounded-full border-2" style={{ backgroundColor: c.bg, borderColor: f.color === k ? "#475569" : c.borde }} />
++          ))}
++        </div>
++        <div className="ml-auto flex gap-2">
++          {onCancelar && <button className={boton} onClick={onCancelar}>Cancelar</button>}
++          <button className="rounded-md bg-slate-800 px-3 py-1.5 text-[13px] font-semibold text-white disabled:opacity-60"
++            disabled={guardando || !(f.titulo.trim() || f.contenido.trim())} onClick={guardar}>
++            {guardando ? "Guardando…" : textoBoton}
++          </button>
++        </div>
++      </div>
++    </div>
++  )
++}
++
++export default function Notas() {
++  const location = useLocation()
++  const modulo = location.pathname.startsWith("/lecheria") ? "lecheria" : "maquinaria"
++  const { datos: lista, cargando, error, setError, recargar } = useCarga(api.listar, [])
++  const [filtro, setFiltro] = useState("pendientes")
++  const [soloModulo, setSoloModulo] = useState(false)
++  const [q, setQ] = useState("")
++  const [editando, setEditando] = useState(null)
++  const [guardando, setGuardando] = useState(false)
++  const [claveNueva, setClaveNueva] = useState(0) // reinicia el editor de nota nueva al guardar
++  const hoy = hoyISO()
++
++  const accion = async (fn) => {
++    try { setGuardando(true); await fn(); await recargar() } catch (e) { setError(e.message) } finally { setGuardando(false) }
++  }
++  const crear = (f) => accion(async () => {
++    await api.crear({ ...f, titulo: f.titulo.trim(), contenido: f.contenido.trim(), recordar_el: f.recordar_el || null })
++    setClaveNueva((k) => k + 1)
++  })
++  const actualizar = (n, cambios) => accion(() => api.actualizar(n.id, { ...n, ...cambios }))
++  const eliminar = (n) => { if (window.confirm("¿Eliminar esta nota?")) accion(() => api.eliminar(n.id)) }
++
++  const visibles = useMemo(() => {
++    const t = q.trim().toLowerCase()
++    return lista
++      .filter((n) => filtro === "todas" || (filtro === "hechas" ? n.hecha : !n.hecha))
++      .filter((n) => !soloModulo || n.modulo === modulo)
++      .filter((n) => !t || `${n.titulo} ${n.contenido}`.toLowerCase().includes(t))
++      .sort((a, b) => Number(b.fijada) - Number(a.fijada) || b.created_at.localeCompare(a.created_at))
++  }, [lista, filtro, soloModulo, modulo, q])
++
++  const recordatorios = lista.filter((n) => !n.hecha && n.recordar_el && n.recordar_el <= hoy)
++    .sort((a, b) => a.recordar_el.localeCompare(b.recordar_el))
++  const pendientes = lista.filter((n) => !n.hecha).length
++
++  if (error && faltaTablaNotas(error)) {
++    return (
++      <div className={tw.container}>
++        <h2 className="text-lg font-bold text-slate-800">Notas</h2>
++        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-[13px] text-amber-800">
++          Las notas todavía no están activadas en la base de datos. Falta ejecutar <b>supabase/sql/notas.sql</b> en el SQL Editor de Supabase.
++        </div>
++      </div>
++    )
++  }
++
++  return (
++    <div className={tw.container}>
++      <div className={tw.topBar}>
++        <div>
++          <h2 className="m-0 text-lg font-bold text-slate-800">Notas</h2>
++          <p className="m-0 mt-1 text-[13px] text-slate-400">{pendientes} pendiente(s) · solo tú ves tus notas</p>
++        </div>
++      </div>
++
++      <EstadoCarga cargando={cargando} error={error} onReintentar={recargar} />
++
++      {recordatorios.length > 0 && (
++        <div className="flex flex-col gap-1.5 rounded-lg border border-amber-200 bg-amber-50 p-3 text-[13px] text-amber-900">
++          <span className="flex items-center gap-1.5 font-semibold"><Bell size={14} /> Recordatorios para hoy o atrasados</span>
++          {recordatorios.map((n) => (
++            <div key={n.id} className="flex flex-wrap items-center gap-2">
++              <span className={n.recordar_el < hoy ? "font-semibold text-red-700" : ""}>{fechaCorta(n.recordar_el)}</span>
++              <span className="min-w-0 flex-1 truncate">{n.titulo || n.contenido}</span>
++              <button className={boton} onClick={() => actualizar(n, { hecha: true })}><Check size={13} className="inline" /> Hecha</button>
++            </div>
++          ))}
++        </div>
++      )}
++
++      <div className="rounded-[10px] border border-slate-200 bg-white p-4">
++        <Editor key={claveNueva} inicial={vacia(modulo)} onGuardar={crear} guardando={guardando} textoBoton="Agregar nota" />
++      </div>
++
++      <div className={tw.filtros}>
++        <div className={tw.buscador}>
++          <Search size={14} color="#94A3B8" />
++          <input className={tw.buscadorInput} placeholder="Buscar en las notas..." value={q} onChange={(e) => setQ(e.target.value)} />
++        </div>
++        <div className="flex overflow-hidden rounded-md border border-slate-200 bg-white text-[13px]">
++          {[["pendientes", "Pendientes"], ["hechas", "Hechas"], ["todas", "Todas"]].map(([k, l]) => (
++            <button key={k} onClick={() => setFiltro(k)} className={`px-3 py-1.5 ${filtro === k ? "bg-slate-800 text-white" : "text-slate-600 hover:bg-slate-50"}`}>{l}</button>
++          ))}
++        </div>
++        <label className="flex items-center gap-1.5 text-[13px] text-slate-500">
++          <input type="checkbox" checked={soloModulo} onChange={(e) => setSoloModulo(e.target.checked)} /> Solo {NOMBRE_MODULO[modulo]}
++        </label>
++      </div>
++
++      {!cargando && visibles.length === 0 && (
++        <div className="flex flex-col items-center gap-2 py-10 text-[13px] text-slate-400">
++          <StickyNote size={28} /> {filtro === "hechas" ? "No hay notas marcadas como hechas." : "No hay notas. Escribe la primera arriba."}
++        </div>
++      )}
++
++      <div className={tw.cardsGrid}>
++        {visibles.map((n) => {
++          const c = COLORES[n.color] ?? COLORES.amarillo
++          const vencida = !n.hecha && n.recordar_el && n.recordar_el < hoy
++          if (editando === n.id)
++            return (
++              <div key={n.id} className="rounded-[10px] border p-3" style={{ backgroundColor: c.bg, borderColor: c.borde }}>
++                <Editor inicial={{ ...n, recordar_el: n.recordar_el ?? "" }} guardando={guardando} textoBoton="Guardar"
++                  onCancelar={() => setEditando(null)}
++                  onGuardar={(f) => { setEditando(null); actualizar(n, { ...f, recordar_el: f.recordar_el || null }) }} />
++              </div>
++            )
++          return (
++            <div key={n.id} className={`flex flex-col gap-2 rounded-[10px] border p-3 ${n.hecha ? "opacity-60" : ""}`}
++              style={{ backgroundColor: c.bg, borderColor: c.borde }}>
++              <div className="flex items-start gap-2">
++                <p className={`m-0 min-w-0 flex-1 text-[14px] font-semibold text-slate-800 ${n.hecha ? "line-through" : ""}`}>
++                  {n.titulo || (n.contenido.length > 40 ? n.contenido.slice(0, 40) + "…" : n.contenido)}
++                </p>
++                {n.fijada && <Pin size={14} className="shrink-0 text-slate-500" />}
++              </div>
++              {n.titulo && n.contenido && <p className="m-0 whitespace-pre-wrap text-[13px] text-slate-700">{n.contenido}</p>}
++              <div className="mt-auto flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500">
++                {n.recordar_el && (
++                  <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 ${vencida ? "bg-red-100 text-red-700" : "bg-white/70"}`}>
++                    <Bell size={11} /> {fechaCorta(n.recordar_el)}
++                  </span>
++                )}
++                {n.modulo && <span className="rounded-full bg-white/70 px-2 py-0.5">{NOMBRE_MODULO[n.modulo] ?? n.modulo}</span>}
++                <span>{new Date(n.created_at).toLocaleDateString("es-CL")}</span>
++                <div className="ml-auto flex gap-1">
++                  <button title={n.fijada ? "Desfijar" : "Fijar arriba"} className="rounded p-1 hover:bg-white/60" onClick={() => actualizar(n, { fijada: !n.fijada })}>
++                    {n.fijada ? <PinOff size={14} /> : <Pin size={14} />}
++                  </button>
++                  <button title={n.hecha ? "Marcar pendiente" : "Marcar hecha"} className="rounded p-1 hover:bg-white/60" onClick={() => actualizar(n, { hecha: !n.hecha })}>
++                    {n.hecha ? <RotateCcw size={14} /> : <Check size={14} />}
++                  </button>
++                  <button title="Editar" className="rounded p-1 hover:bg-white/60" onClick={() => setEditando(n.id)}><Pencil size={14} /></button>
++                  <button title="Eliminar" className="rounded p-1 text-red-600 hover:bg-white/60" onClick={() => eliminar(n)}><Trash2 size={14} /></button>
++                </div>
++              </div>
++            </div>
++          )
++        })}
++      </div>
++    </div>
++  )
++}
+diff --git a/src/pages/VistaProveedores.jsx b/src/pages/VistaProveedores.jsx
+index 8bae520..0d3c2ed 100644
+--- a/src/pages/VistaProveedores.jsx
++++ b/src/pages/VistaProveedores.jsx
+@@ -1,7 +1,9 @@
+-import { useMemo, useState } from "react"
++import { useCallback, useMemo, useState } from "react"
+ import { useNavigate } from "react-router-dom"
+-import { Pencil, Plus, Phone, Mail, Search } from "lucide-react"
+-import { proveedores as api } from "../services/lecheria"
++import { Pencil, Plus, Phone, Mail, Search, Truck, Tags, Wallet, Award } from "lucide-react"
++import Scorecard from "../components/maquinaria/Scorecard"
++import { clp } from "../lib/formato"
++import { proveedores as api, insumos as insumosApi, gastos as gastosApi } from "../services/lecheria"
+ import useCarga from "../lib/useCarga"
+ import EstadoCarga from "../components/EstadoCarga"
+ import s from "./estilosLecheria"
+@@ -12,7 +14,26 @@ const link = { display: "inline-flex", alignItems: "center", gap: 4, color: "#3D
+ // Vista de solo lectura. Crear, editar y eliminar: /lecheria/registrar?tipo=proveedor
+ export default function VistaProveedores() {
+   const navigate = useNavigate()
+-  const { datos: proveedores, cargando, error, recargar } = useCarga(api.listar, [])
++  const cargarTodo = useCallback(async () => {
++    const [proveedores, insumos, gastos] = await Promise.all([api.listar(), insumosApi.listar(), gastosApi.listar()])
++    return { proveedores, insumos, gastos }
++  }, [])
++  const { datos, cargando, error, recargar } = useCarga(cargarTodo, { proveedores: [], insumos: [], gastos: [] })
++  const { proveedores, insumos, gastos } = datos
++  const anioActual = String(new Date().getFullYear())
++
++  // Gasto del año por proveedor y productos que abastece cada uno
++  const resumen = useMemo(() => {
++    const gasto = new Map(), productos = new Map()
++    for (const g of gastos)
++      if (g.proveedor_id && g.fecha?.startsWith(anioActual)) gasto.set(g.proveedor_id, (gasto.get(g.proveedor_id) ?? 0) + (Number(g.monto) || 0))
++    for (const i of insumos) if (i.proveedor_id) productos.set(i.proveedor_id, (productos.get(i.proveedor_id) ?? 0) + 1)
++    let principal = null
++    for (const [id, monto] of gasto) if (!principal || monto > principal.monto) principal = { id, monto }
++    return { gasto, productos, principal, totalAnio: [...gasto.values()].reduce((a, b) => a + b, 0) }
++  }, [gastos, insumos, anioActual])
++  const rubros = new Set(proveedores.map((p) => p.rubro).filter(Boolean)).size
++  const principal = resumen.principal && proveedores.find((p) => p.id === resumen.principal.id)
+   const [q, setQ] = useState("")
+ 
+   const filtrados = useMemo(() => {
+@@ -32,6 +53,14 @@ export default function VistaProveedores() {
+         </button>
+       </div>
+ 
++      <div className={tw.statsRow}>
++        <Scorecard icono={Truck} color="#3D6B4F" bg="#D1FAE5" valor={proveedores.length} etiqueta="Proveedores registrados" />
++        <Scorecard icono={Tags} color="#7C3AED" bg="#EDE9FE" valor={rubros} etiqueta="Rubros distintos" />
++        <Scorecard icono={Wallet} color="#1E40AF" bg="#DBEAFE" valor={clp(resumen.totalAnio)} etiqueta={`Comprado en ${anioActual}`} detalle="gastos con proveedor asignado" />
++        <Scorecard icono={Award} color="#92400E" bg="#FEF3C7" valor={principal ? principal.nombre : "—"} etiqueta="Proveedor principal del año"
++          detalle={principal ? clp(resumen.principal.monto) : null} />
++      </div>
++
+       <div className={tw.filtros}>
+         <div className={tw.buscador}>
+           <Search size={14} color="#94A3B8" />
+@@ -45,24 +74,25 @@ export default function VistaProveedores() {
+         <div className={tw.tableCard}>
+           <table className={tw.table}>
+             <thead>
+-              <tr>{["Empresa", "RUT", "Contacto", "Teléfono", "Email", "Rubro", "Comuna", ""].map((h) => <th key={h} className={tw.th}>{h}</th>)}</tr>
++              <tr>{["Empresa", "RUT", "Contacto", "Teléfono", "Email", "Rubro", "Productos", `Gasto ${anioActual}`, ""].map((h) => <th key={h} className={tw.th}>{h}</th>)}</tr>
+             </thead>
+             <tbody>
+               {filtrados.map((p, i) => (
+                 <tr key={p.id} style={{ backgroundColor: i % 2 === 0 ? "#F8FAFC" : "#fff" }}>
+-                  <td className={tw.td}><span style={s.nombre}>{p.nombre}</span></td>
++                  <td className={tw.td}><span style={s.nombre}>{p.nombre}</span>{p.comuna && <span style={{ display: "block", fontSize: 11, color: "#94A3B8" }}>{p.comuna}</span>}</td>
+                   <td className={tw.td}>{p.rut}</td>
+                   <td className={tw.td}>{p.contacto}</td>
+                   <td className={tw.td}>{p.telefono && <a href={`tel:${p.telefono.replace(/\s/g, "")}`} style={link}><Phone size={12} /> {p.telefono}</a>}</td>
+                   <td className={tw.td}>{p.email && <a href={`mailto:${p.email}`} style={link}><Mail size={12} /> {p.email}</a>}</td>
+                   <td className={tw.td}>{p.rubro}</td>
+-                  <td className={tw.td}>{p.comuna}</td>
++                  <td className={tw.td}>{resumen.productos.get(p.id) ?? 0}</td>
++                  <td className={tw.td}>{resumen.gasto.has(p.id) ? clp(resumen.gasto.get(p.id)) : "—"}</td>
+                   <td className={tw.td}>
+                     <button style={s.iconBtnGreen} title="Editar en Registrar" onClick={() => navigate(`/lecheria/registrar?tipo=proveedor&id=${p.id}`)}><Pencil size={14} /></button>
+                   </td>
+                 </tr>
+               ))}
+-              {filtrados.length === 0 && <tr><td colSpan={8} style={s.vacio}>No hay proveedores que coincidan.</td></tr>}
++              {filtrados.length === 0 && <tr><td colSpan={9} style={s.vacio}>No hay proveedores que coincidan.</td></tr>}
+             </tbody>
+           </table>
+         </div>
+diff --git a/src/pages/VistasComidas.jsx b/src/pages/VistasComidas.jsx
+index 761ae64..2d3de0b 100644
+--- a/src/pages/VistasComidas.jsx
++++ b/src/pages/VistasComidas.jsx
+@@ -1,6 +1,7 @@
+ import { useCallback, useMemo, useState } from "react"
+ import { useNavigate } from "react-router-dom"
+-import { Pencil, Plus, AlertTriangle, Search } from "lucide-react"
++import { Pencil, Plus, AlertTriangle, Search, Package, PackageX, Wallet } from "lucide-react"
++import Scorecard from "../components/maquinaria/Scorecard"
+ import { insumos as api, proveedores as proveedoresApi } from "../services/lecheria"
+ import useCarga from "../lib/useCarga"
+ import { clp } from "../lib/formato"
+@@ -27,6 +28,8 @@ export default function VistaComidas() {
+   const categorias = useMemo(() => [...new Set(items.map((i) => i.categoria).filter(Boolean))].sort(), [items])
+ 
+   const alertas = items.filter((i) => Number(i.stock) <= Number(i.minimo))
++  const sinStock = items.filter((i) => Number(i.stock) === 0).length
++  const valorInventario = items.reduce((t, i) => t + (Number(i.stock) || 0) * (Number(i.precio) || 0), 0)
+   const filtrados = items.filter((i) => {
+     const t = q.trim().toLowerCase()
+     return (!t || i.nombre.toLowerCase().includes(t)) && (!fCategoria || i.categoria === fCategoria) && (!soloAlertas || Number(i.stock) <= Number(i.minimo))
+@@ -44,6 +47,13 @@ export default function VistaComidas() {
+         </button>
+       </div>
+ 
++      <div className={tw.statsRow}>
++        <Scorecard icono={Package} color="#3D6B4F" bg="#D1FAE5" valor={items.length} etiqueta="Productos registrados" detalle={`${categorias.length} categorías`} />
++        <Scorecard icono={AlertTriangle} color="#92400E" bg="#FEF3C7" valor={alertas.length - sinStock} etiqueta="Con stock bajo" detalle="en o bajo el mínimo" />
++        <Scorecard icono={PackageX} color="#991B1B" bg="#FEE2E2" valor={sinStock} etiqueta="Sin stock" />
++        <Scorecard icono={Wallet} color="#1E40AF" bg="#DBEAFE" valor={clp(valorInventario)} etiqueta="Valor del inventario" detalle="stock × precio unitario" />
++      </div>
++
+       {alertas.length > 0 && (
+         <div style={s.alertBox}>
+           <AlertTriangle size={16} color="#D97706" />
+diff --git a/src/services/notas.js b/src/services/notas.js
+new file mode 100644
+index 0000000..e0286c6
+--- /dev/null
++++ b/src/services/notas.js
+@@ -0,0 +1,19 @@
++// ─────────────────────────────────────────────────────────────────────────────
++// Notas y recordatorios del dueño (tabla notas, ver supabase/sql/notas.sql)
++// Cada usuario ve solo sus notas de la empresa activa (lo asegura RLS).
++// ─────────────────────────────────────────────────────────────────────────────
++import { crud } from "./db"
++
++const base = crud("notas", { orden: "created_at", ascendente: false })
++const COLS = ["titulo", "contenido", "modulo", "color", "fijada", "recordar_el", "hecha"]
++const solo = (d) => Object.fromEntries(COLS.filter((c) => c in d).map((c) => [c, d[c]]))
++
++export const notas = {
++  listar: base.listar,
++  crear: (d) => base.crear(solo(d)),
++  actualizar: (id, d) => base.actualizar(id, solo(d)),
++  eliminar: base.eliminar,
++}
++
++// La tabla todavía no existe en la base de datos
++export const faltaTablaNotas = (msg = "") => /notas/i.test(msg) && /(does not exist|schema cache|PGRST205|42P01)/i.test(msg)
+diff --git a/supabase/sql/notas.sql b/supabase/sql/notas.sql
+new file mode 100644
+index 0000000..5aa972b
+--- /dev/null
++++ b/supabase/sql/notas.sql
+@@ -0,0 +1,39 @@
++-- Notas y recordatorios del dueño (administrador). Cada usuario ve solo sus propias notas,
++-- dentro de la empresa activa. Pegar en el SQL Editor de Supabase.
++
++create table if not exists public.notas (
++  id            bigint generated always as identity primary key,
++  empresa_id    uuid not null references public.empresas(id) on delete cascade
++                default (select p.empresa_activa_id from public.perfiles p where p.id = auth.uid()),
++  user_id       uuid not null references auth.users(id) on delete cascade default auth.uid(),
++  titulo        text not null default '',
++  contenido     text not null default '',
++  modulo        text,                    -- 'maquinaria' | 'lecheria' | null (general)
++  color         text not null default 'amarillo',
++  fijada        boolean not null default false,
++  recordar_el   date,                    -- fecha opcional para recordatorio
++  hecha         boolean not null default false,
++  created_at    timestamptz not null default now(),
++  updated_at    timestamptz not null default now()
++);
++
++create index if not exists notas_usuario_idx on public.notas (user_id, empresa_id, hecha, fijada desc, created_at desc);
++
++-- updated_at automático
++create or replace function public.notas_tocar_updated_at() returns trigger language plpgsql as $$
++begin new.updated_at := now(); return new; end $$;
++drop trigger if exists notas_updated_at on public.notas;
++create trigger notas_updated_at before update on public.notas
++  for each row execute function public.notas_tocar_updated_at();
++
++-- Seguridad: solo el dueño de la nota, y solo en una empresa de la que es miembro
++alter table public.notas enable row level security;
++
++drop policy if exists notas_propias on public.notas;
++create policy notas_propias on public.notas
++  for all to authenticated
++  using (user_id = auth.uid())
++  with check (
++    user_id = auth.uid()
++    and exists (select 1 from public.membresias m where m.user_id = auth.uid() and m.empresa_id = notas.empresa_id and m.activo)
++  );
