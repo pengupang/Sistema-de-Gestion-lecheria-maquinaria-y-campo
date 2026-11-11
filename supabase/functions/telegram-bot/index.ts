@@ -164,14 +164,26 @@ export async function fichaAnimal(sb: Sb, emp: string, arete: string) {
 // ── Bot ─────────────────────────────────────────────────────
 
 const AYUDA = `<b>Comandos</b>
+
+<b>Día a día</b>
 /resumen · alertas y agenda de los próximos 3 días
 /agenda [días] · calendario (por defecto 7 días)
 /stock · insumos bajo el mínimo
 /animal ARETE · ficha de un animal
-/facturas [n] · últimas facturas guardadas (por defecto 5)
-/desvincular · desconectar este chat
 
-📎 Para guardar una factura, envíame la foto o el PDF. Si quieres, escribe el N° o el proveedor en el pie de foto.
+<b>Compras e inventario</b>
+/pendientes · facturas por importar y compras por recibir
+/compras [n] · últimas compras
+/diferencias [n] · lo que dice la factura vs lo que llegó
+/perdidas · plata perdida por faltantes
+/movimientos [n] · últimos movimientos de inventario
+
+<b>Facturas</b>
+📎 Envíame la foto o el PDF y lo guardo (en el pie de foto escribe el N° o el proveedor).
+/facturas [n] · últimas facturas guardadas
+
+/menu · ver esta lista
+/desvincular · desconectar este chat
 
 Cada mañana a las 6:30 te llega el resumen automáticamente.`
 
@@ -192,7 +204,7 @@ async function manejar(sb: Sb, chatId: string, texto: string) {
   const [cmdRaw, ...resto] = texto.trim().split(/\s+/)
   const cmd = cmdRaw.split("@")[0].toLowerCase()
 
-  if (cmd === "/start" || cmd === "/ayuda" || cmd === "/help") {
+  if (cmd === "/start" || cmd === "/ayuda" || cmd === "/help" || cmd === "/menu") {
     return enviar(chatId, (await contexto(sb, chatId)) ? AYUDA : NO_VINCULADO)
   }
 
@@ -240,12 +252,126 @@ async function manejar(sb: Sb, chatId: string, texto: string) {
     return enviar(chatId, (await fichaAnimal(sb, empresaId, resto[0])) ?? "No encontré un animal con ese arete.")
   }
 
+  if (["/compras", "/diferencias", "/perdidas", "/movimientos", "/pendientes"].includes(cmd)) {
+    if (!areas.includes("lecheria")) return enviar(chatId, "Tu usuario no tiene acceso a Lechería.")
+    if (cmd === "/compras") return conCompras(chatId, () => comprasTexto(sb, empresaId, nEntre(resto[0], 5, 15)))
+    if (cmd === "/diferencias") return conCompras(chatId, () => diferenciasTexto(sb, empresaId, nEntre(resto[0], 5, 15)))
+    if (cmd === "/perdidas") return conCompras(chatId, () => perdidasTexto(sb, empresaId, hoyChile()))
+    if (cmd === "/movimientos") return conCompras(chatId, () => movimientosTexto(sb, empresaId, nEntre(resto[0], 10, 20)))
+    return conCompras(chatId, () => pendientesTexto(sb, empresaId))
+  }
+
   if (cmd === "/facturas") {
     const n = Math.min(Math.max(parseInt(resto[0] ?? "5") || 5, 1), 10)
     return enviar(chatId, await listarFacturas(sb, empresaId, n))
   }
 
   return enviar(chatId, "No reconozco ese comando.\n\n" + AYUDA)
+}
+
+// ── Compras e inventario (requiere aplicar sql/02_compras_inventario.sql) ───
+const diaChile = (ts: string) => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Santiago" }).format(new Date(ts))
+const num = (n: unknown) => Number(n).toLocaleString("es-CL", { maximumFractionDigits: 3 })
+const nEntre = (txt: string | undefined, def: number, max: number) => Math.min(Math.max(parseInt(txt ?? String(def)) || def, 1), max)
+const ICONO_ESTADO: Record<string, string> = { "Por recibir": "⏳", "Recibida completa": "✅", "Con diferencias": "⚠️" }
+const ETIQUETA_MOV: Record<string, string> = { entrada_compra: "entrada por compra", ajuste: "ajuste", consumo: "consumo", merma: "merma" }
+
+// Si falta aplicar la migración, avisamos en vez de mostrar un error genérico
+async function conCompras(chatId: string, fn: () => Promise<string>) {
+  try {
+    return await enviar(chatId, await fn())
+  } catch (e) {
+    // deno-lint-ignore no-explicit-any
+    const code = (e as any)?.code
+    if (code === "PGRST205" || code === "42P01") {
+      return enviar(chatId, "Compras e inventario aún no está activado en la base de datos (falta aplicar la migración 02_compras_inventario.sql).")
+    }
+    throw e
+  }
+}
+
+// deno-lint-ignore no-explicit-any
+const lineaCompra = (c: any) =>
+  `• #${c.id} · ${fmt(c.fecha_documento)} · ${esc(c.proveedor ?? "Sin proveedor")} · ${esc(c.tipo_documento)}${c.numero_documento ? " " + esc(c.numero_documento) : ""}` +
+  `${c.total != null ? " · " + clp(c.total) : ""}\n   ${ICONO_ESTADO[c.estado] ?? ""} ${c.estado}` +
+  `${c.estado === "Por recibir" ? ` (${c.lineas_contadas}/${c.lineas} líneas contadas)` : ""}` +
+  `${Number(c.valor_perdido) > 0 ? " · perdido " + clp(c.valor_perdido) : ""}`
+
+async function comprasTexto(sb: Sb, emp: string, n: number) {
+  const { data, error } = await sb.from("compras_resumen").select("*").eq("empresa_id", emp)
+    .order("fecha_documento", { ascending: false }).order("id", { ascending: false }).limit(n)
+  if (error) throw error
+  if (!data?.length) return "Aún no hay compras registradas."
+  return "<b>🧾 Últimas compras</b>\n" + data.map(lineaCompra).join("\n")
+}
+
+async function diferenciasTexto(sb: Sb, emp: string, n: number) {
+  const { data, error } = await sb.from("compras_diferencias").select("*").eq("empresa_id", emp)
+    .order("recibido_en", { ascending: false }).limit(n)
+  if (error) throw error
+  if (!data?.length) return "No hay diferencias: todo lo contado coincide con las facturas ✅"
+  const lineas = data.map((d) => {
+    const u = d.unidad ? " " + esc(d.unidad) : ""
+    const que = d.tipo === "Faltante" ? `faltan ${num(d.diferencia)}${u}` : `sobran ${num(Math.abs(d.diferencia))}${u}`
+    return `• #${d.compra_id} · ${esc(d.proveedor ?? "Sin proveedor")} · ${esc(d.descripcion)}\n   factura ${num(d.dice_factura)}, hay ${num(d.hay_realmente)} → ${que} (${clp(Math.abs(d.valor_diferencia))})` +
+      (d.motivo_diferencia ? `\n   📝 ${esc(d.motivo_diferencia)}` : "")
+  })
+  return "<b>⚠️ Dice la factura vs lo que hay</b>\n" + lineas.join("\n")
+}
+
+async function perdidasTexto(sb: Sb, emp: string, hoy: string) {
+  const { data, error } = await sb.from("compras_diferencias").select("proveedor, fecha_documento, valor_diferencia")
+    .eq("empresa_id", emp).eq("tipo", "Faltante").limit(5000)
+  if (error) throw error
+  if (!data?.length) return "No hay pérdidas registradas ✅"
+  const mes = hoy.slice(0, 7)
+  let total = 0, delMes = 0
+  const porProv = new Map<string, number>()
+  for (const d of data) {
+    const v = Number(d.valor_diferencia)
+    total += v
+    if (String(d.fecha_documento).startsWith(mes)) delMes += v
+    const p = d.proveedor ?? "Sin proveedor"
+    porProv.set(p, (porProv.get(p) ?? 0) + v)
+  }
+  const top = [...porProv.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([p, v]) => `• ${esc(p)}: ${clp(v)}`)
+  return `<b>📉 Pérdidas por faltantes</b>\nEste mes (por fecha de factura): ${clp(delMes)}\nTotal acumulado: ${clp(total)}\n\n<b>Por proveedor</b>\n${top.join("\n")}`
+}
+
+async function movimientosTexto(sb: Sb, emp: string, n: number) {
+  const { data, error } = await sb.from("movimientos_insumo")
+    .select("tipo, cantidad, origen, created_at, insumos(nombre, unidad)")
+    .eq("empresa_id", emp).order("created_at", { ascending: false }).limit(n)
+  if (error) throw error
+  if (!data?.length) return "Aún no hay movimientos de inventario."
+  return "<b>📦 Últimos movimientos</b>\n" + data.map((m) => {
+    const i = un(m.insumos)
+    const c = Number(m.cantidad)
+    return `• ${fmt(diaChile(m.created_at))} · ${esc(i?.nombre ?? "insumo")}: ${c > 0 ? "+" : ""}${num(c)} ${esc(i?.unidad ?? "")}\n   ${ETIQUETA_MOV[m.tipo] ?? esc(m.tipo)}${m.origen ? " · " + esc(m.origen) : ""}`
+  }).join("\n")
+}
+
+// "Por importar" = facturas guardadas que todavía no tienen compra · "Por recibir" = compras sin contar
+async function pendientesTexto(sb: Sb, emp: string) {
+  const [{ data: facs, error: e1 }, { data: porRecibir, error: e2 }] = await Promise.all([
+    sb.from("facturas_archivos").select("id, nombre_original, nota, creado_en, compras(id)")
+      .eq("empresa_id", emp).order("creado_en", { ascending: false }).limit(200),
+    sb.from("compras_resumen").select("*").eq("empresa_id", emp).eq("estado", "Por recibir")
+      .order("fecha_documento", { ascending: false }).limit(10),
+  ])
+  if (e1) throw e1
+  if (e2) throw e2
+  const sinCompra = (facs ?? []).filter((f) => !un(f.compras))
+  const bloques: string[] = []
+  if (sinCompra.length) {
+    bloques.push(
+      `<b>📥 Facturas guardadas sin compra</b> (${sinCompra.length}, por importar)\n` +
+        sinCompra.slice(0, 10).map((f) => `• ${fmt(diaChile(f.creado_en))} · ${esc(f.nota || f.nombre_original || "factura")}`).join("\n") +
+        (sinCompra.length > 10 ? "\n… y más" : ""),
+    )
+  }
+  if (porRecibir?.length) bloques.push("<b>⏳ Compras por recibir</b> (falta contar)\n" + porRecibir.map(lineaCompra).join("\n"))
+  return bloques.length ? bloques.join("\n\n") : "No hay nada pendiente ✅"
 }
 
 // ── Facturas: el bot guarda fotos/PDF en Supabase Storage ───
