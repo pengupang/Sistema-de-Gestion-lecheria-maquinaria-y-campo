@@ -89,7 +89,7 @@ export default function DashboardLecheria() {
           </table>
         </div>
 
-        {/* Últimas mediciones PlantCare */}
+        {/* Última medición */}
         <div style={{ ...styles.tableCard, flex: 1 }}>
           <div style={styles.tableHeader}>
             <Leaf size={16} color="#3D6B4F" />
@@ -113,7 +113,7 @@ export default function DashboardLecheria() {
           </div>
           <p style={styles.medicionFecha}>
             {r.ultimaMedicion ? `Medida el ${new Date(r.ultimaMedicion.created_at).toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" })} · ` : ""}
-            <Link to="/lecheria/mediciones" style={{ color: "#3D6B4F" }}>Ver todas las mediciones</Link>
+            <Link to="/lecheria/mediciones" style={{ color: "#3D6B4F" }}>Ver mediciones</Link>
           </p>
         </div>
       </div>

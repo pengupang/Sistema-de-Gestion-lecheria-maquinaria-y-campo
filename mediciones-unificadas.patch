@@ -1,0 +1,196 @@
+diff --git a/src/App.jsx b/src/App.jsx
+index 23492e8..ed7283d 100644
+--- a/src/App.jsx
++++ b/src/App.jsx
+@@ -9,7 +9,6 @@ import LayoutMaquinaria from './layout/LayoutMaquinaria'
+ import VistaMaquinaria from './pages/VistaMaquinaria'
+ import VistaProveedores from './pages/VistaProveedores'
+ import VistaComidas from './pages/VistasComidas'
+-import DashboardPlantCare from './pages/DashboardPlantCare'
+ import VistaHistoricosGastos from './pages/HistoricoGastos'
+ import VistaCalendarioAnimales from './pages/CalendarioAnimales'
+ import VistaClientes from './pages/Clientes'
+@@ -23,7 +22,7 @@ import Sanidad from './pages/Sanidad'
+ import Genealogia from './pages/Genealogia'
+ import IngresoMaquinaria from './pages/IngresoMaquinaria'
+ import IngresoLecheria from './pages/IngresoLecheria'
+-import VistaMediciones from './pages/VistaMediciones'
++import Mediciones from './pages/Mediciones'
+ import Notas from './pages/Notas'
+ 
+ function App() {
+@@ -63,13 +62,14 @@ function App() {
+             <Route path="dashboard" element={<DashboardLecheria />} />
+             <Route path="comidas" element={<VistaComidas />} />
+             <Route path="proveedores" element={<VistaProveedores />} />
+-            <Route path="plantcare" element={<DashboardPlantCare />} />
++            {/* "PlantCare" pasó a llamarse Mediciones: el enlace antiguo redirige */}
++            <Route path="plantcare" element={<Navigate to="/lecheria/mediciones" replace />} />
+             <Route path="calendario" element={<VistaCalendarioAnimales />} />
+             <Route path="historicos" element={<VistaHistoricosGastos />} />
+             <Route path="rebano" element={<RebanoPotreros />} />
+             <Route path="sanidad" element={<Sanidad />} />
+             <Route path="genealogia" element={<Genealogia />} />
+-            <Route path="mediciones" element={<VistaMediciones />} />
++            <Route path="mediciones" element={<Mediciones />} />
+             <Route path="notas" element={<Notas />} />
+             <Route path="registrar" element={<IngresoLecheria />} />
+           </Route>
+diff --git a/src/layout/LayoutLecheria.jsx b/src/layout/LayoutLecheria.jsx
+index a980b8d..5fd4b58 100644
+--- a/src/layout/LayoutLecheria.jsx
++++ b/src/layout/LayoutLecheria.jsx
+@@ -3,7 +3,6 @@ import LayoutModulo from "./LayoutModulo"
+ 
+ const navItems = [
+   { label: "Dashboard", icon: LayoutDashboard, path: "/lecheria/dashboard" },
+-  { label: "PlantCare", icon: Leaf, path: "/lecheria/plantcare" },
+   { label: "Mediciones", icon: Activity, path: "/lecheria/mediciones" },
+   { label: "Comidas", icon: ShoppingBasket, path: "/lecheria/comidas" },
+   { label: "Proveedores", icon: Truck, path: "/lecheria/proveedores" },
+@@ -17,7 +16,7 @@ const navItems = [
+ ]
+ 
+ // Atajos de la barra inferior en celular (máx. 4; el resto queda en "Más")
+-const atajos = ["/lecheria/dashboard", "/lecheria/plantcare", "/lecheria/comidas", "/lecheria/registrar"]
++const atajos = ["/lecheria/dashboard", "/lecheria/mediciones", "/lecheria/comidas", "/lecheria/registrar"]
+ 
+ // Clases completas (no armadas con variables) para que Tailwind las incluya
+ const tema = {
+diff --git a/src/pages/DashboardLecheria.jsx b/src/pages/DashboardLecheria.jsx
+index 16bd373..f0a4a07 100644
+--- a/src/pages/DashboardLecheria.jsx
++++ b/src/pages/DashboardLecheria.jsx
+@@ -89,7 +89,7 @@ export default function DashboardLecheria() {
+           </table>
+         </div>
+ 
+-        {/* Últimas mediciones PlantCare */}
++        {/* Última medición */}
+         <div style={{ ...styles.tableCard, flex: 1 }}>
+           <div style={styles.tableHeader}>
+             <Leaf size={16} color="#3D6B4F" />
+@@ -113,7 +113,7 @@ export default function DashboardLecheria() {
+           </div>
+           <p style={styles.medicionFecha}>
+             {r.ultimaMedicion ? `Medida el ${new Date(r.ultimaMedicion.created_at).toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" })} · ` : ""}
+-            <Link to="/lecheria/mediciones" style={{ color: "#3D6B4F" }}>Ver todas las mediciones</Link>
++            <Link to="/lecheria/mediciones?vista=vivo" style={{ color: "#3D6B4F" }}>Ver todas las mediciones</Link>
+           </p>
+         </div>
+       </div>
+diff --git a/src/pages/Mediciones.jsx b/src/pages/Mediciones.jsx
+new file mode 100644
+index 0000000..b988221
+--- /dev/null
++++ b/src/pages/Mediciones.jsx
+@@ -0,0 +1,34 @@
++import { useSearchParams } from "react-router-dom"
++import { MapPin, Radio } from "lucide-react"
++import MedicionesTerreno from "./MedicionesTerreno"
++import MedicionesEnVivo from "./MedicionesEnVivo"
++import s from "./estilosLecheria"
++import tw from "@/lib/ui"
++
++// Una sola sección de Mediciones (lo que antes era "PlantCare") con dos vistas:
++//   · Por terreno: elegir cliente y terreno, ver la última lectura de suelo, su historial y el diagnóstico IA
++//   · En vivo: últimas lecturas de cada dispositivo (sonda, camas de terneros), con gráfico y actualización automática
++// URL: /lecheria/mediciones?vista=terreno|vivo
++const VISTAS = [
++  { id: "terreno", label: "Por terreno e IA", icono: MapPin },
++  { id: "vivo", label: "Dispositivos en vivo", icono: Radio },
++]
++
++export default function Mediciones() {
++  const [params, setParams] = useSearchParams()
++  const vista = VISTAS.some((v) => v.id === params.get("vista")) ? params.get("vista") : "terreno"
++
++  return (
++    <div className={tw.container}>
++      <div className={tw.tabs}>
++        {VISTAS.map(({ id, label, icono: Icono }) => (
++          <button key={id} onClick={() => setParams({ vista: id })}
++            className={tw.tab} style={{ display: "flex", alignItems: "center", gap: 6, ...(vista === id ? s.tabActive : {}) }}>
++            <Icono size={14} /> {label}
++          </button>
++        ))}
++      </div>
++      {vista === "terreno" ? <MedicionesTerreno /> : <MedicionesEnVivo />}
++    </div>
++  )
++}
+diff --git a/src/pages/VistaMediciones.jsx b/src/pages/MedicionesEnVivo.jsx
+similarity index 99%
+rename from src/pages/VistaMediciones.jsx
+rename to src/pages/MedicionesEnVivo.jsx
+index e14a521..ef6acd9 100644
+--- a/src/pages/VistaMediciones.jsx
++++ b/src/pages/MedicionesEnVivo.jsx
+@@ -47,7 +47,7 @@ const haceCuanto = (iso) => {
+ const fmtValor = (v) => (v == null ? "—" : Number(v).toLocaleString("es-CL", { maximumFractionDigits: 1 }))
+ 
+ // Mediciones en tiempo real: camas de terneros, sonda de suelo u otros sensores, filtradas por tipo y período.
+-export default function VistaMediciones() {
++export default function MedicionesEnVivo() {
+   const { datos: tipos } = useCarga(tiposObjetivo, [])
+   const [tipoId, setTipoId] = useState(null) // null = aún no elegido (se propone el de camas/terneros)
+   const [periodo, setPeriodo] = useState("24h")
+@@ -92,7 +92,7 @@ export default function VistaMediciones() {
+     <div className={tw.container}>
+       <div className={tw.topBar}>
+         <div>
+-          <h2 style={s.title}>Mediciones</h2>
++          <h2 style={s.title}>Dispositivos en vivo</h2>
+           <p style={s.sub}>{visibles.length} lecturas · {fuentes.length} dispositivo(s)</p>
+         </div>
+         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+diff --git a/src/pages/DashboardPlantCare.jsx b/src/pages/MedicionesTerreno.jsx
+similarity index 98%
+rename from src/pages/DashboardPlantCare.jsx
+rename to src/pages/MedicionesTerreno.jsx
+index 2d5ba28..4daf59e 100644
+--- a/src/pages/DashboardPlantCare.jsx
++++ b/src/pages/MedicionesTerreno.jsx
+@@ -17,7 +17,8 @@ function formatFecha(fechaISO) {
+   return d.toLocaleDateString("es-CL", { day: "2-digit", month: "2-digit" })
+ }
+ 
+-function DashboardPlantCare() {
++// Mediciones por terreno: última lectura de la sonda de suelo, historial y diagnóstico IA (antes "PlantCare")
++function MedicionesTerreno() {
+   const [clientes, setClientes] = useState([])
+   const [loadingClientes, setLoadingClientes] = useState(true)
+ 
+@@ -145,9 +146,9 @@ function DashboardPlantCare() {
+   ]
+ 
+   return (
+-    <div className="p-6 md:p-8 bg-slate-100 min-h-screen">
++    <div>
+       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+-        <h1 className="text-2xl font-bold text-slate-800">Dashboard de Administración</h1>
++        <h2 className="text-lg font-bold text-slate-800">Suelo por terreno y recomendación IA</h2>
+ 
+         <div className="flex flex-wrap gap-2">
+           <SearchableSelect
+@@ -353,4 +354,4 @@ function DashboardPlantCare() {
+   )
+ }
+ 
+-export default DashboardPlantCare
+\ No newline at end of file
++export default MedicionesTerreno
+\ No newline at end of file
+diff --git a/src/services/lecheria.js b/src/services/lecheria.js
+index 6f21a24..a067184 100644
+--- a/src/services/lecheria.js
++++ b/src/services/lecheria.js
+@@ -44,7 +44,7 @@ export async function resumenLecheria() {
+   }
+ }
+ 
+-// ───────────── Mediciones (sonda de suelo PlantCare y sensores de camas de terneros) ─────────────
++// ───────────── Mediciones (sonda de suelo y sensores de camas de terneros) ─────────────
+ // La misma tabla guarda todo; tipo_objetivo dice qué se midió (suelo, cama de ternero, etc.)
+ const SEL_MEDICION =
+   "*, tipo:tipos_objetivo(codigo, nombre), dispositivo:dispositivos(nombre), potrero:potreros(nombre)"

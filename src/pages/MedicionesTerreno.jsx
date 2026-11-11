@@ -17,7 +17,8 @@ function formatFecha(fechaISO) {
   return d.toLocaleDateString("es-CL", { day: "2-digit", month: "2-digit" })
 }
 
-function DashboardPlantCare() {
+// Mediciones por terreno: última lectura de la sonda de suelo, historial y diagnóstico IA (antes "PlantCare")
+function MedicionesTerreno() {
   const [clientes, setClientes] = useState([])
   const [loadingClientes, setLoadingClientes] = useState(true)
 
@@ -145,9 +146,9 @@ function DashboardPlantCare() {
   ]
 
   return (
-    <div className="p-6 md:p-8 bg-slate-100 min-h-screen">
+    <div>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold text-slate-800">Dashboard de Administración</h1>
+        <h2 className="text-lg font-bold text-slate-800">Suelo por terreno y recomendación IA</h2>
 
         <div className="flex flex-wrap gap-2">
           <SearchableSelect
@@ -353,4 +354,4 @@ function DashboardPlantCare() {
   )
 }
 
-export default DashboardPlantCare
+export default MedicionesTerreno

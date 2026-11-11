@@ -44,7 +44,7 @@ export async function resumenLecheria() {
   }
 }
 
-// ───────────── Mediciones (sonda de suelo PlantCare y sensores de camas de terneros) ─────────────
+// ───────────── Mediciones (sonda de suelo y sensores de camas de terneros) ─────────────
 // La misma tabla guarda todo; tipo_objetivo dice qué se midió (suelo, cama de ternero, etc.)
 const SEL_MEDICION =
   "*, tipo:tipos_objetivo(codigo, nombre), dispositivo:dispositivos(nombre), potrero:potreros(nombre)"

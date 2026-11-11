@@ -3,7 +3,6 @@ import LayoutModulo from "./LayoutModulo"
 
 const navItems = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/lecheria/dashboard" },
-  { label: "PlantCare", icon: Leaf, path: "/lecheria/plantcare" },
   { label: "Mediciones", icon: Activity, path: "/lecheria/mediciones" },
   { label: "Comidas", icon: ShoppingBasket, path: "/lecheria/comidas" },
   { label: "Proveedores", icon: Truck, path: "/lecheria/proveedores" },
@@ -17,7 +16,7 @@ const navItems = [
 ]
 
 // Atajos de la barra inferior en celular (máx. 4; el resto queda en "Más")
-const atajos = ["/lecheria/dashboard", "/lecheria/plantcare", "/lecheria/comidas", "/lecheria/registrar"]
+const atajos = ["/lecheria/dashboard", "/lecheria/mediciones", "/lecheria/comidas", "/lecheria/registrar"]
 
 // Clases completas (no armadas con variables) para que Tailwind las incluya
 const tema = {

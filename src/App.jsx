@@ -9,7 +9,6 @@ import LayoutMaquinaria from './layout/LayoutMaquinaria'
 import VistaMaquinaria from './pages/VistaMaquinaria'
 import VistaProveedores from './pages/VistaProveedores'
 import VistaComidas from './pages/VistasComidas'
-import DashboardPlantCare from './pages/DashboardPlantCare'
 import VistaHistoricosGastos from './pages/HistoricoGastos'
 import VistaCalendarioAnimales from './pages/CalendarioAnimales'
 import VistaClientes from './pages/Clientes'
@@ -23,7 +22,7 @@ import Sanidad from './pages/Sanidad'
 import Genealogia from './pages/Genealogia'
 import IngresoMaquinaria from './pages/IngresoMaquinaria'
 import IngresoLecheria from './pages/IngresoLecheria'
-import VistaMediciones from './pages/VistaMediciones'
+import Mediciones from './pages/Mediciones'
 import Notas from './pages/Notas'
 
 function App() {
@@ -63,13 +62,14 @@ function App() {
             <Route path="dashboard" element={<DashboardLecheria />} />
             <Route path="comidas" element={<VistaComidas />} />
             <Route path="proveedores" element={<VistaProveedores />} />
-            <Route path="plantcare" element={<DashboardPlantCare />} />
+            {/* "PlantCare" pasó a llamarse Mediciones: el enlace antiguo redirige */}
+            <Route path="plantcare" element={<Navigate to="/lecheria/mediciones" replace />} />
             <Route path="calendario" element={<VistaCalendarioAnimales />} />
             <Route path="historicos" element={<VistaHistoricosGastos />} />
             <Route path="rebano" element={<RebanoPotreros />} />
             <Route path="sanidad" element={<Sanidad />} />
             <Route path="genealogia" element={<Genealogia />} />
-            <Route path="mediciones" element={<VistaMediciones />} />
+            <Route path="mediciones" element={<Mediciones />} />
             <Route path="notas" element={<Notas />} />
             <Route path="registrar" element={<IngresoLecheria />} />
           </Route>

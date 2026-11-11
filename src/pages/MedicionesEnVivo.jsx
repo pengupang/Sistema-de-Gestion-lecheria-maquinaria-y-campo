@@ -7,17 +7,12 @@ import EstadoCarga from "../components/EstadoCarga"
 import s from "./estilosLecheria"
 import tw from "@/lib/ui"
 
-// Variables que puede traer una medición (se muestran solo las que vienen con dato)
+// Variables de los sensores de cama (la cama se guarda en las columnas *_suelo de la tabla mediciones)
 const VARIABLES = [
   { campo: "temperatura_ambiente", titulo: "Temp. ambiente", unidad: "°C" },
   { campo: "humedad_ambiente", titulo: "Humedad ambiente", unidad: "%" },
-  { campo: "temperatura_suelo", titulo: "Temp. suelo / cama", unidad: "°C" },
-  { campo: "humedad_suelo", titulo: "Humedad suelo / cama", unidad: "%" },
-  { campo: "ph", titulo: "pH", unidad: "" },
-  { campo: "ec", titulo: "Conductividad", unidad: "dS/m" },
-  { campo: "nitrogeno", titulo: "Nitrógeno", unidad: "kg/ha" },
-  { campo: "fosforo", titulo: "Fósforo", unidad: "kg/ha" },
-  { campo: "potasio", titulo: "Potasio", unidad: "kg/ha" },
+  { campo: "temperatura_suelo", titulo: "Temp. de la cama", unidad: "°C" },
+  { campo: "humedad_suelo", titulo: "Humedad de la cama", unidad: "%" },
 ]
 
 // Umbrales REFERENCIALES para camas de terneros: ajustarlos con la referencia de INIA cuando la tengan.
@@ -46,22 +41,24 @@ const haceCuanto = (iso) => {
 }
 const fmtValor = (v) => (v == null ? "—" : Number(v).toLocaleString("es-CL", { maximumFractionDigits: 1 }))
 
-// Mediciones en tiempo real: camas de terneros, sonda de suelo u otros sensores, filtradas por tipo y período.
-export default function VistaMediciones() {
-  const { datos: tipos } = useCarga(tiposObjetivo, [])
-  const [tipoId, setTipoId] = useState(null) // null = aún no elegido (se propone el de camas/terneros)
+// Monitoreo continuo de las camas de terneros (los únicos sensores que envían lecturas solos).
+// Las mediciones de suelo son puntuales y se ven en la pestaña "Por terreno e IA".
+export default function MedicionesEnVivo() {
+  const { datos: tipos, cargando: cargandoTipos } = useCarga(tiposObjetivo, null)
   const [periodo, setPeriodo] = useState("24h")
   const [fuente, setFuente] = useState("")
   const [variable, setVariable] = useState("temperatura_ambiente")
   const [enVivo, setEnVivo] = useState(false)
 
-  // Por defecto, el tipo que parezca de camas de terneros; si no hay, todos
-  const tipoElegido = tipoId ?? (tipos.find((t) => /terner|cama/i.test(`${t.codigo} ${t.nombre}`))?.id ?? "")
+  // Tipo de objetivo de las camas de terneros (tabla tipos_objetivo)
+  const tipoCamas = tipos?.find((t) => /terner|cama/i.test(`${t.codigo} ${t.nombre}`)) ?? null
 
   const { datos: mediciones, cargando, error, recargar } = useCarga(
-    () => listarMediciones({ desde: new Date(Date.now() - PERIODOS[periodo] * 86400000).toISOString(), tipoId: tipoElegido }),
+    async () => (tipoCamas
+      ? listarMediciones({ desde: new Date(Date.now() - PERIODOS[periodo] * 86400000).toISOString(), tipoId: tipoCamas.id })
+      : []),
     [],
-    `${periodo}-${tipoElegido}`
+    `${periodo}-${tipoCamas?.id ?? ""}`
   )
 
   // Tiempo real: al llegar una medición nueva se recarga la lista
@@ -92,8 +89,8 @@ export default function VistaMediciones() {
     <div className={tw.container}>
       <div className={tw.topBar}>
         <div>
-          <h2 style={s.title}>Mediciones</h2>
-          <p style={s.sub}>{visibles.length} lecturas · {fuentes.length} dispositivo(s)</p>
+          <h2 style={s.title}>Camas de terneros</h2>
+          <p style={s.sub}>Monitoreo continuo · {visibles.length} lecturas · {fuentes.length} sensor(es)</p>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           <span style={{ ...s.badge, display: "inline-flex", alignItems: "center", gap: 4, backgroundColor: enVivo ? "#D1FAE5" : "#F1F5F9", color: enVivo ? "#065F46" : "#64748B" }}
@@ -105,35 +102,38 @@ export default function VistaMediciones() {
       </div>
 
       <div className={tw.filtros}>
-        <select style={s.select} value={tipoElegido} onChange={(e) => setTipoId(e.target.value)}>
-          <option value="">Todos los tipos</option>
-          {tipos.map((t) => <option key={t.id} value={t.id}>{t.nombre}</option>)}
-        </select>
         <select style={s.select} value={periodo} onChange={(e) => setPeriodo(e.target.value)}>
           <option value="24h">Últimas 24 horas</option>
           <option value="7d">Últimos 7 días</option>
           <option value="30d">Últimos 30 días</option>
         </select>
         <select style={s.select} value={fuente} onChange={(e) => setFuente(e.target.value)}>
-          <option value="">Todos los dispositivos</option>
+          <option value="">Todos los sensores</option>
           {fuentes.map((f) => <option key={f}>{f}</option>)}
         </select>
       </div>
 
       <EstadoCarga cargando={cargando} error={error} onReintentar={recargar} />
 
+      {!cargandoTipos && tipos && !tipoCamas && (
+        <div style={{ ...s.alertBox, backgroundColor: "#F8FAFC", borderColor: "#E2E8F0", color: "#64748B" }}>
+          Falta registrar el tipo de objetivo de las camas de terneros en la tabla <b>tipos_objetivo</b> (por ejemplo, código "cama_ternero").
+          Mientras no exista, aquí no se muestran lecturas.
+        </div>
+      )}
+
       {alertas.length > 0 && (
         <div style={s.alertBox}>
           <AlertTriangle size={16} color="#D97706" />
           <span>
-            <strong>{alertas.length} dispositivo(s)</strong> con valores fuera del rango referencial: {alertas.map(([n]) => n).join(", ")}.
+            <strong>{alertas.length} cama(s)</strong> con valores fuera del rango referencial: {alertas.map(([n]) => n).join(", ")}.
           </span>
         </div>
       )}
 
-      {!cargando && !error && visibles.length === 0 && (
+      {!cargando && !error && tipoCamas && visibles.length === 0 && (
         <div style={{ ...s.alertBox, backgroundColor: "#F8FAFC", borderColor: "#E2E8F0", color: "#64748B" }}>
-          No hay mediciones en este período. Cuando un dispositivo envíe lecturas aparecerán aquí automáticamente.
+          No hay lecturas de las camas en este período. Cuando un sensor envíe datos aparecerán aquí automáticamente.
         </div>
       )}
 
@@ -147,7 +147,7 @@ export default function VistaMediciones() {
                 <div style={{ minWidth: 0 }}>
                   <p style={{ ...s.nombre, margin: 0 }}>{nombre}</p>
                   <p style={{ fontSize: 11, color: "#94A3B8", margin: 0 }}>
-                    {[m.tipo?.nombre, m.potrero?.nombre].filter(Boolean).join(" · ")} · {haceCuanto(m.created_at)}
+                    {[m.potrero?.nombre, m.etiqueta && m.etiqueta !== nombre ? m.etiqueta : null].filter(Boolean).join(" · ")}{m.potrero?.nombre || (m.etiqueta && m.etiqueta !== nombre) ? " · " : ""}{haceCuanto(m.created_at)}
                   </p>
                 </div>
               </div>
@@ -202,7 +202,7 @@ export default function VistaMediciones() {
         <div className={tw.tableCard}>
           <table className={tw.table}>
             <thead>
-              <tr>{["Fecha", "Dispositivo", ...conDato.map((v) => v.titulo)].map((h) => <th key={h} className={tw.th}>{h}</th>)}</tr>
+              <tr>{["Fecha", "Sensor", ...conDato.map((v) => v.titulo)].map((h) => <th key={h} className={tw.th}>{h}</th>)}</tr>
             </thead>
             <tbody>
               {visibles.slice(0, 100).map((m) => (
