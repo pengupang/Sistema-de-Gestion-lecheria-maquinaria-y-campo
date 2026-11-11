@@ -1,8 +1,8 @@
 import { useCallback, useMemo, useState } from "react"
-import { Search, Wrench, CheckCircle, FileText, AlertCircle } from "lucide-react"
-import { maquinas as api, arriendos as arriendosApi } from "@/services/maquinaria"
+import {AlertTriangle, Search, Wrench, CheckCircle, FileText, AlertCircle } from "lucide-react"
+import { maquinas as api, arriendos as arriendosApi , fallas as fallasApi} from "@/services/maquinaria"
 import useCarga from "@/lib/useCarga"
-import { clp, fechaCL } from "@/lib/formato"
+import { clp, fechaCL, aInputLocal, horasFalla} from "@/lib/formato"
 import EstadoCarga from "@/components/EstadoCarga"
 import Scorecard from "@/components/maquinaria/Scorecard"
 import s, { ESTADO_MAQUINA } from "./EstilosMaquinaria"
@@ -10,31 +10,50 @@ import s, { ESTADO_MAQUINA } from "./EstilosMaquinaria"
 // Vista de solo lectura. Ingreso y edición: /maquinaria/registrar?tipo=maquina (desde el menú "Registrar")
 export default function VistaMaquinaria() {
   const cargarTodo = useCallback(async () => {
-    const [maquinas, arriendos] = await Promise.all([api.listar(), arriendosApi.listar()])
-    return { maquinas, arriendos }
+    const [maquinas, arriendos,fallas] = await Promise.all([api.listar(), arriendosApi.listar(), fallasApi.listar().catch])
+    return { maquinas, arriendos, fallas}
   }, [])
-  const { datos, cargando, error, recargar } = useCarga(cargarTodo, { maquinas: [], arriendos: [] })
-  const { maquinas, arriendos } = datos
+  const { datos, cargando, error, recargar } = useCarga(cargarTodo, { maquinas: [], arriendos: [], fallas :[]})
+  const { maquinas, arriendos, fallas } = datos
 
-  const anio = String(new Date().getFullYear())
+  const hoyStr = aInputLocal(new Date()).slice(0, 10)
+  const [desde, setDesde] = useState(`${hoyStr.slice(0, 4)}-01-01`)
+  const [hasta, setHasta] = useState(hoyStr)
   const [q, setQ] = useState("")
   const [fEstado, setFEstado] = useState("")
   const [fTipo, setFTipo] = useState("")
 
   const tipos = useMemo(() => [...new Set(maquinas.map((m) => m.tipo).filter(Boolean))].sort(), [maquinas])
 
-  // Uso de cada máquina en el año: n° de arriendos, ingresos cotizados y último uso
+  // Uso de cada máquina en el período: n° de arriendos, ingresos cotizados y último uso
   const uso = useMemo(() => {
     const r = {}
     for (const a of arriendos) {
-      if (!a.inicio?.startsWith(anio)) continue
+      if (!(a.inicio <= hasta && a.fin >= desde)) continue
       const u = (r[a.maquina_id] ??= { n: 0, monto: 0, ultimo: "" })
       u.n += 1
       u.monto += Number(a.monto) || 0
       if (a.inicio > u.ultimo) u.ultimo = a.inicio
     }
     return r
-  }, [arriendos, anio])
+  }, [arriendos, desde,hasta])
+
+  const fallasPorMaquina = useMemo(() => {
+  const r = {}
+  for (const f of fallas) {
+    const dia = aInputLocal(f.inicio).slice(0, 10) // fecha local, no UTC
+    if (dia < desde || dia > hasta) continue
+    const x = (r[f.maquina_id] ??= { n: 0, horas: 0 })
+    x.n += 1
+    x.horas += horasFalla(f)
+  }
+  return r
+}, [fallas, desde, hasta])
+
+const masFallas = maquinas.reduce(
+  (top, m) => ((fallasPorMaquina[m.id]?.n ?? 0) > (fallasPorMaquina[top?.id]?.n ?? 0) ? m : top),
+  null
+)
 
   const filtradas = useMemo(() => {
     const t = q.trim().toLowerCase()
@@ -65,8 +84,14 @@ export default function VistaMaquinaria() {
         <Scorecard icono={AlertCircle} color="#991B1B" bg="#FEE2E2" valor={cuenta("Mantención")} etiqueta="En mantención" />
         <Scorecard icono={Wrench} color="#7C3AED" bg="#EDE9FE"
           valor={masUsada && uso[masUsada.id] ? masUsada.nombre : "—"}
-          etiqueta={`Más usada en ${anio}`}
+          etiqueta={`Más usada en el período`}
           detalle={masUsada && uso[masUsada.id] ? `${uso[masUsada.id].n} arriendos` : null} />
+        <Scorecard icono={AlertTriangle} color="#C2410C" bg="#FFEDD5"
+        valor={masFallas && fallasPorMaquina[masFallas.id] ? masFallas.nombre : "—"}
+        etiqueta="Más fallas en el período"
+        detalle={masFallas && fallasPorMaquina[masFallas.id]
+          ? `${fallasPorMaquina[masFallas.id].n} fallas · ${Math.round(fallasPorMaquina[masFallas.id].horas)} h`
+          : null} />
       </div>
 
       <div style={s.filtros}>
@@ -82,6 +107,8 @@ export default function VistaMaquinaria() {
           <option value="">Todos los tipos</option>
           {tipos.map((t) => <option key={t}>{t}</option>)}
         </select>
+          <input type="date" style={s.select} value={desde} max={hasta} onChange={(e) => setDesde(e.target.value)} />
+          <input type="date" style={s.select} value={hasta} min={desde} onChange={(e) => setHasta(e.target.value)} />
         {(q || fEstado || fTipo) && <button style={s.btnCancel} onClick={() => { setQ(""); setFEstado(""); setFTipo("") }}>Limpiar filtros</button>}
       </div>
 
@@ -91,7 +118,7 @@ export default function VistaMaquinaria() {
         <div style={s.tableCard}>
           <table style={s.table}>
             <thead>
-              <tr>{["Nombre / Modelo", "Tipo", "Estado", "Tarifa ref.", `Arriendos ${anio}`, `Ingresos ${anio}`, "Último uso"].map((h) => <th key={h} style={s.th}>{h}</th>)}</tr>
+              <tr>{["Nombre / Modelo", "Tipo", "Estado", "Tarifa ref.", `Arriendos`, `Ingresos `, "Último uso", "Fallas", "Horas detenidas"].map((h) => <th key={h} style={s.th}>{h}</th>)}</tr>
             </thead>
             <tbody>
               {filtradas.map((m, i) => {
@@ -105,10 +132,12 @@ export default function VistaMaquinaria() {
                     <td style={s.td}>{u?.n ?? 0}</td>
                     <td style={s.td}>{u ? clp(u.monto) : "—"}</td>
                     <td style={s.td}>{u?.ultimo ? fechaCL(u.ultimo) : "—"}</td>
+                    <td style={s.td}>{fallasPorMaquina[m.id]?.n ?? 0}</td>
+                    <td style={s.td}>{fallasPorMaquina[m.id] ? `${Math.round(fallasPorMaquina[m.id].horas)} h` : "—"}</td>
                   </tr>
                 )
               })}
-              {filtradas.length === 0 && <tr><td colSpan={7} style={s.vacio}>No hay equipos con esos filtros.</td></tr>}
+              {filtradas.length === 0 && <tr><td colSpan={9} style={s.vacio}>No hay equipos con esos filtros.</td></tr>}
             </tbody>
           </table>
         </div>

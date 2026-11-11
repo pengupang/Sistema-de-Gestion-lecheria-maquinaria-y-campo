@@ -42,3 +42,6 @@ export const duracionFalla = (f) => {
   const h = Math.round((new Date(f.fin) - new Date(f.inicio)) / 36e5)
   return h < 24 ? `${h} h` : `${Math.floor(h / 24)} d ${h % 24} h`
 }
+
+// Horas que la máquina estuvo (o lleva) detenida
+export const horasFalla = (f) => ((f.fin ? new Date(f.fin) : new Date()) - new Date(f.inicio)) / 36e5
