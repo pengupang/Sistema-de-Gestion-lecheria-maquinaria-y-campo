@@ -5,6 +5,7 @@ import useCarga from "@/lib/useCarga"
 import EstadoCarga from "@/components/EstadoCarga"
 import Scorecard from "@/components/maquinaria/Scorecard"
 import s, { AZUL } from "./EstilosMaquinaria"
+import tw from "@/lib/ui"
 
 // Vista de solo lectura. Ingreso y edición: /maquinaria/registrar?tipo=servicio (desde el menú "Registrar")
 export default function VistaServicios() {
@@ -53,15 +54,15 @@ export default function VistaServicios() {
   const sinMaquina = servicios.filter((sv) => sv.maquinas.length === 0).length
 
   return (
-    <div style={s.container}>
-      <div style={s.topBar}>
+    <div className={tw.container}>
+      <div className={tw.topBar}>
         <div>
           <h2 style={s.title}>Tipos de Servicio</h2>
           <p style={s.sub}>{filtrados.length} de {servicios.length} servicios</p>
         </div>
       </div>
 
-      <div style={s.statsRow}>
+      <div className={tw.statsRow}>
         <Scorecard icono={Wrench} color="#4A6FA5" bg="#EBF2FB" valor={servicios.length} etiqueta="Servicios ofrecidos"
           detalle={sinMaquina ? `${sinMaquina} sin máquina asignada` : "todos con máquina asignada"} />
         <Scorecard icono={MapIcon} color="#065F46" bg="#D1FAE5" valor={servicios.filter((sv) => sv.unidad !== "horas").length} etiqueta="Por hectárea" />
@@ -72,10 +73,10 @@ export default function VistaServicios() {
           detalle={masPedido && uso[masPedido.id] ? `${uso[masPedido.id].n} arriendos` : null} />
       </div>
 
-      <div style={s.filtros}>
-        <div style={s.buscador}>
+      <div className={tw.filtros}>
+        <div className={tw.buscador}>
           <Search size={14} color="#94A3B8" />
-          <input style={s.buscadorInput} placeholder="Buscar servicio..." value={q} onChange={(e) => setQ(e.target.value)} />
+          <input className={tw.buscadorInput} placeholder="Buscar servicio..." value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
         <select style={s.select} value={fUnidad} onChange={(e) => setFUnidad(e.target.value)}>
           <option value="">Todas las unidades</option>
@@ -95,7 +96,7 @@ export default function VistaServicios() {
       <EstadoCarga cargando={cargando} error={error} onReintentar={recargar} />
 
       {!cargando && !error && (
-        <div style={s.cardsGrid}>
+        <div className={tw.cardsGrid}>
           {filtrados.map((sv) => (
             <div key={sv.id} style={s.card}>
               <div style={s.cardHead}>

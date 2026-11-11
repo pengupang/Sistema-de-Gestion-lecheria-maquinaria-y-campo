@@ -90,8 +90,8 @@ export default function VistaCalendarioArriendo() {
 
       <EstadoCarga cargando={false} error={error} onReintentar={recargar} />
 
-      <div style={styles.calLayout}>
-        <div style={styles.calCard}>
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+        <div className="w-full min-w-0" style={styles.calCard}>
           <div style={styles.calHeader}>
             <button style={styles.navBtn} onClick={prevMonth}><ChevronLeft size={16}/></button>
             <span style={styles.mesLabel}>{MESES[mes]} {anio}{cargando ? " …" : ""}</span>
@@ -119,7 +119,7 @@ export default function VistaCalendarioArriendo() {
           </div>
         </div>
 
-        <div style={styles.sidePanel}>
+        <div className="w-full shrink-0 lg:w-60" style={styles.sidePanel}>
           <h3 style={styles.sidePanelTitle}>{selectedDay ? `${selectedDay} de ${MESES[mes]}` : `Todo ${MESES[mes].toLowerCase()}`}</h3>
           {panel.length === 0
             ? <p style={styles.noEventos}>Sin arriendos, mantenciones ni fallas</p>
@@ -158,7 +158,7 @@ const styles = {
   dayNum:{fontSize:"13px",display:"block",textAlign:"center"},
   eventDots:{display:"flex",justifyContent:"center",gap:"2px",marginTop:"4px"},
   eventDot:{width:6,height:6,borderRadius:"50%"},
-  sidePanel:{backgroundColor:"#fff",borderRadius:"10px",border:"1px solid #E2E8F0",padding:"20px",width:"240px",flexShrink:0},
+  sidePanel:{backgroundColor:"#fff",borderRadius:"10px",border:"1px solid #E2E8F0",padding:"20px"},
   sidePanelTitle:{fontSize:"14px",fontWeight:700,color:"#1E293B",margin:"0 0 16px 0"},
   noEventos:{fontSize:"13px",color:"#94A3B8"},
   eventoCard:{backgroundColor:"#F8FAFC",borderRadius:"8px",padding:"10px 12px",marginBottom:"10px",border:"1px solid #F1F5F9"},

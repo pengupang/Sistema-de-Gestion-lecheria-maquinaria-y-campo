@@ -3,6 +3,7 @@ import { Plus, Pencil, Trash2, Check, Search } from "lucide-react"
 import { animales as animalesApi, sanidad as sanidadApi, etiquetaAnimal, hoyISO } from "../services/lecheria"
 import ModalLecheria, { Campo } from "../components/ModalLecheria"
 import s, { TIPOS_EVENTO } from "./estilosLecheria"
+import tw from "@/lib/ui"
 
 const vacio = { animal_id: "", tipo: "Vacunación", producto: "", fecha: "", proximo_control: "", costo: 0, responsable: "", estado: "pendiente", nota: "" }
 const fechaCL = (iso) => (iso ? iso.split("-").reverse().join("/") : "—")
@@ -137,8 +138,8 @@ export default function Sanidad() {
   }
 
   return (
-    <div style={s.container}>
-      <div style={s.topBar}>
+    <div className={tw.container}>
+      <div className={tw.topBar}>
         <div>
           <h2 style={s.title}>Sanidad y Manejo</h2>
           <p style={s.sub}>Vacunas, tratamientos y controles · se reflejan en el Calendario de Animales</p>
@@ -150,17 +151,17 @@ export default function Sanidad() {
 
       {error && <div style={s.errorBox}>{error}</div>}
 
-      <div style={s.statsRow}>
+      <div className={tw.statsRow}>
         <div style={s.stat}><p style={s.statValue}>{stats.pendientes}</p><p style={s.statLabel}>Pendientes</p></div>
         <div style={s.stat}><p style={{ ...s.statValue, color: stats.vencidos ? "#DC2626" : "#1E293B" }}>{stats.vencidos}</p><p style={s.statLabel}>Vencidos</p></div>
         <div style={s.stat}><p style={s.statValue}>{stats.proximos}</p><p style={s.statLabel}>Próximos 7 días</p></div>
         <div style={s.stat}><p style={s.statValue}>${stats.costoMes.toLocaleString("es-CL")}</p><p style={s.statLabel}>Costo sanitario del mes</p></div>
       </div>
 
-      <div style={s.filtros}>
-        <div style={s.buscador}>
+      <div className={tw.filtros}>
+        <div className={tw.buscador}>
           <Search size={14} color="#94A3B8" />
-          <input style={s.buscadorInput} placeholder="Buscar animal" value={q} onChange={(e) => setQ(e.target.value)} />
+          <input className={tw.buscadorInput} placeholder="Buscar animal" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
         <select style={s.select} value={fEstado} onChange={(e) => setFEstado(e.target.value)}>
           <option value="">Todos los estados</option>
@@ -174,10 +175,10 @@ export default function Sanidad() {
         </select>
       </div>
 
-      <div style={s.tableCard}>
-        <table style={s.table}>
+      <div className={tw.tableCard}>
+        <table className={tw.table}>
           <thead>
-            <tr>{["Fecha", "Animal", "Tipo", "Producto", "Próx. control", "Costo", "Estado", ""].map((h) => <th key={h} style={s.th}>{h}</th>)}</tr>
+            <tr>{["Fecha", "Animal", "Tipo", "Producto", "Próx. control", "Costo", "Estado", ""].map((h) => <th key={h} className={tw.th}>{h}</th>)}</tr>
           </thead>
           <tbody>
             {filtrados.map((r, i) => {
@@ -185,15 +186,15 @@ export default function Sanidad() {
               const b = badgeEstado[estadoVisible(r)]
               return (
                 <tr key={r.id} style={{ backgroundColor: i % 2 === 0 ? "#F8FAFC" : "#fff" }}>
-                  <td style={s.td}>{fechaCL(r.fecha)}</td>
-                  <td style={s.td}><span style={s.nombre}>{etiquetaAnimal(animalDe(r.animal_id))}</span></td>
-                  <td style={s.td}><span style={{ ...s.badge, backgroundColor: t?.bg, color: t?.color }}>{r.tipo}</span></td>
-                  <td style={s.td}>{r.producto || "—"}</td>
-                  <td style={s.td}>{fechaCL(r.proximo_control)}</td>
-                  <td style={s.td}>${Number(r.costo || 0).toLocaleString("es-CL")}</td>
-                  <td style={s.td}><span style={{ ...s.badge, backgroundColor: b.bg, color: b.color }}>{b.label}</span></td>
-                  <td style={s.td}>
-                    <div style={s.actions}>
+                  <td className={tw.td}>{fechaCL(r.fecha)}</td>
+                  <td className={tw.td}><span style={s.nombre}>{etiquetaAnimal(animalDe(r.animal_id))}</span></td>
+                  <td className={tw.td}><span style={{ ...s.badge, backgroundColor: t?.bg, color: t?.color }}>{r.tipo}</span></td>
+                  <td className={tw.td}>{r.producto || "—"}</td>
+                  <td className={tw.td}>{fechaCL(r.proximo_control)}</td>
+                  <td className={tw.td}>${Number(r.costo || 0).toLocaleString("es-CL")}</td>
+                  <td className={tw.td}><span style={{ ...s.badge, backgroundColor: b.bg, color: b.color }}>{b.label}</span></td>
+                  <td className={tw.td}>
+                    <div className={tw.actions}>
                       {r.estado === "pendiente" && (
                         <button style={s.iconBtnGreen} title="Marcar realizado" onClick={() => marcarRealizado(r)}><Check size={14} /></button>
                       )}

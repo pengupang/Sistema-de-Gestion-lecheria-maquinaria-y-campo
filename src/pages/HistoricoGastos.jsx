@@ -173,7 +173,7 @@ export default function VistaHistoricosGastos() {
       </div>
 
       {/* Gráficos */}
-      <div style={styles.chartsRow}>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div style={styles.chartCard}>
           <h3 style={styles.chartTitle}>{anio === "todos" ? "Gastos por año" : `Gastos por mes ${anio}`}</h3>
           <ResponsiveContainer width="100%" height={200}>
@@ -276,7 +276,7 @@ export default function VistaHistoricosGastos() {
 
 const styles = {
   container: { display: "flex", flexDirection: "column", gap: "20px" },
-  topBar: { display: "flex", justifyContent: "space-between", alignItems: "flex-start" },
+  topBar: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" },
   title: { fontSize: "18px", fontWeight: 700, color: "#1E293B", margin: 0 },
   sub: { fontSize: "13px", color: "#94A3B8", margin: "4px 0 0 0" },
   btnAdd: { display: "flex", alignItems: "center", gap: "6px", padding: "8px 16px", backgroundColor: "#3D6B4F", border: "none", borderRadius: "6px", color: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer" },
@@ -286,14 +286,14 @@ const styles = {
   statValue: { fontSize: "20px", fontWeight: 700, color: "#1E293B", margin: "0 0 2px 0" },
   statLabel: { fontSize: "12px", color: "#94A3B8", margin: 0 },
   chartsRow: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" },
-  chartCard: { backgroundColor: "#fff", borderRadius: "10px", padding: "20px", border: "1px solid #D1E8DA" },
+  chartCard: { backgroundColor: "#fff", borderRadius: "10px", padding: "20px", border: "1px solid #D1E8DA", minWidth: 0 },
   chartTitle: { fontSize: "14px", fontWeight: 600, color: "#1E293B", margin: "0 0 16px 0" },
-  tableCard: { backgroundColor: "#fff", borderRadius: "10px", border: "1px solid #D1E8DA", overflow: "hidden" },
+  tableCard: { backgroundColor: "#fff", borderRadius: "10px", border: "1px solid #D1E8DA", overflowX: "auto" },
   tableTopBar: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 16px 0 16px", flexWrap: "wrap", gap: "10px" },
   tableTitle: { fontSize: "14px", fontWeight: 600, color: "#1E293B", margin: 0 },
   filtros: { display: "flex", gap: "6px", flexWrap: "wrap" },
   filtroBadge: { padding: "4px 10px", borderRadius: "20px", fontSize: "12px", fontWeight: 500, border: "none", cursor: "pointer" },
-  table: { width: "100%", borderCollapse: "collapse", marginTop: "12px" },
+  table: { width: "100%", borderCollapse: "collapse", marginTop: "12px", minWidth: "640px" },
   th: { textAlign: "left", fontSize: "11px", fontWeight: 600, color: "#94A3B8", padding: "10px 16px", borderBottom: "1px solid #E2E8F0", textTransform: "uppercase", letterSpacing: "0.05em", backgroundColor: "#F8FAFC" },
   td: { padding: "11px 16px", fontSize: "13px", color: "#334155", borderBottom: "1px solid #F1F5F9" },
   catBadge: { padding: "3px 10px", borderRadius: "20px", fontSize: "12px", fontWeight: 500 },

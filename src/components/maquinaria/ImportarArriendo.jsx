@@ -4,6 +4,7 @@ import { leerCSV, descargarCSV } from "@/lib/exportar"
 import { validarArriendos } from "@/lib/importarArriendos"
 import { clp, fechaCL } from "@/lib/formato"
 import s, { AZUL } from "@/pages/EstilosMaquinaria"
+import tw from "@/lib/ui"
 
 const COLUMNAS = ["Cliente", "Máquina", "Servicio", "Inicio", "Término", "Cantidad", "Unidad", "Monto", "Pagado", "Estado", "Predio", "Comuna"]
 const OBLIGATORIAS = ["Cliente", "Máquina", "Servicio", "Inicio", "Cantidad", "Monto"]
@@ -68,13 +69,13 @@ export default function ImportarArriendos({ catalogo, onImportado }) {
   }
 
   return (
-    <div style={{ ...s.tableCard, padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
+    <div className={tw.tableCard} style={{ padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
       <div>
         <h3 style={{ ...s.modalTitle, color: AZUL }}>Importar historial de arriendos</h3>
         <p style={s.sub}>Sube un CSV con el formato de la plantilla (o un archivo exportado desde Arriendos). Primero verás una revisión; nada se guarda hasta que confirmes.</p>
       </div>
 
-      <div style={s.filtros}>
+      <div className={tw.filtros}>
         <button style={s.btnCancel} onClick={descargarPlantilla}>Descargar plantilla</button>
         <input key={inputKey} type="file" accept=".csv,text/csv" onChange={leerArchivo} />
       </div>
@@ -84,11 +85,11 @@ export default function ImportarArriendos({ catalogo, onImportado }) {
 
       {revision.length > 0 && (
         <>
-          <div style={{ ...s.filtros, justifyContent: "space-between" }}>
+          <div className={tw.filtros} style={{ justifyContent: "space-between" }}>
             <p style={{ ...s.sub, margin: 0 }}>
               <b>{archivo}</b>: {validas.length} listas para importar · {conError.length} con errores
             </p>
-            <div style={s.filtros}>
+            <div className={tw.filtros}>
               <label style={{ fontSize: 13, display: "flex", gap: 6, alignItems: "center" }}>
                 <input type="checkbox" checked={soloErrores} onChange={(e) => setSoloErrores(e.target.checked)} />
                 Ver solo errores
@@ -100,17 +101,17 @@ export default function ImportarArriendos({ catalogo, onImportado }) {
           </div>
 
           <div style={{ overflowX: "auto" }}>
-            <table style={s.table}>
-              <thead><tr>{["Línea", "Cliente", "Máquina", "Inicio", "Monto", "Revisión"].map((h) => <th key={h} style={s.th}>{h}</th>)}</tr></thead>
+            <table className={tw.table}>
+              <thead><tr>{["Línea", "Cliente", "Máquina", "Inicio", "Monto", "Revisión"].map((h) => <th key={h} className={tw.th}>{h}</th>)}</tr></thead>
               <tbody>
                 {visibles.map((r) => (
                   <tr key={r.linea} style={{ backgroundColor: r.datos ? "#F0FDF4" : "#FEF2F2" }}>
-                    <td style={s.td}>{r.linea}</td>
-                    <td style={s.td}>{r.original["Cliente"]}</td>
-                    <td style={s.td}>{r.original["Máquina"]}</td>
-                    <td style={s.td}>{r.datos ? fechaCL(r.datos.inicio) : r.original["Inicio"]}</td>
-                    <td style={s.td}>{r.datos ? clp(r.datos.monto) : r.original["Monto"]}</td>
-                    <td style={{ ...s.td, color: r.datos ? "#065F46" : "#991B1B", fontSize: 12 }}>
+                    <td className={tw.td}>{r.linea}</td>
+                    <td className={tw.td}>{r.original["Cliente"]}</td>
+                    <td className={tw.td}>{r.original["Máquina"]}</td>
+                    <td className={tw.td}>{r.datos ? fechaCL(r.datos.inicio) : r.original["Inicio"]}</td>
+                    <td className={tw.td}>{r.datos ? clp(r.datos.monto) : r.original["Monto"]}</td>
+                    <td className={tw.td} style={{ color: r.datos ? "#065F46" : "#991B1B", fontSize: 12 }}>
                       {r.datos ? "✓ Lista" : r.errores.join(" · ")}
                     </td>
                   </tr>

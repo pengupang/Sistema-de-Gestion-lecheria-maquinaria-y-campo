@@ -7,6 +7,7 @@ import EstadoCarga from "@/components/EstadoCarga"
 import Scorecard from "@/components/maquinaria/Scorecard"
 import { TIPOS_CLIENTE } from "@/components/maquinaria/forms/FormCliente"
 import s from "./EstilosMaquinaria"
+import tw from "@/lib/ui"
 
 // Vista de solo lectura. Ingreso y edición: /maquinaria/registrar?tipo=cliente (desde el menú "Registrar")
 export default function VistaClientes() {
@@ -55,25 +56,25 @@ export default function VistaClientes() {
   const conDeuda = Object.values(resumen).filter((c) => c.porCobrar > 0).length
 
   return (
-    <div style={s.container}>
-      <div style={s.topBar}>
+    <div className={tw.container}>
+      <div className={tw.topBar}>
         <div>
           <h2 style={s.title}>Clientes</h2>
           <p style={s.sub}>{filtrados.length} de {clientes.length} clientes</p>
         </div>
       </div>
 
-      <div style={s.statsRow}>
+      <div className={tw.statsRow}>
         <Scorecard icono={Users} color="#4A6FA5" bg="#EBF2FB" valor={activos} etiqueta="Clientes activos" />
         <Scorecard icono={UserX} color="#64748B" bg="#F1F5F9" valor={clientes.length - activos} etiqueta="Inactivos" />
         <Scorecard icono={CalendarCheck} color="#065F46" bg="#D1FAE5" valor={conArriendos} etiqueta={`Con arriendos en ${anio}`} />
         <Scorecard icono={Clock} color="#92400E" bg="#FEF3C7" valor={clp(totalPorCobrar)} etiqueta="Por cobrar" detalle={`${conDeuda} clientes`} />
       </div>
 
-      <div style={s.filtros}>
-        <div style={s.buscador}>
+      <div className={tw.filtros}>
+        <div className={tw.buscador}>
           <Search size={14} color="#94A3B8" />
-          <input style={s.buscadorInput} placeholder="Buscar nombre, RUT, comuna o email..." value={q} onChange={(e) => setQ(e.target.value)} />
+          <input className={tw.buscadorInput} placeholder="Buscar nombre, RUT, comuna o email..." value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
         <select style={s.select} value={fEstado} onChange={(e) => setFEstado(e.target.value)}>
           <option value="activos">Activos</option>
@@ -94,28 +95,28 @@ export default function VistaClientes() {
       <EstadoCarga cargando={cargando} error={error} onReintentar={recargar} />
 
       {!cargando && !error && (
-        <div style={s.tableCard}>
-          <table style={s.table}>
+        <div className={tw.tableCard}>
+          <table className={tw.table}>
             <thead>
-              <tr>{["Nombre / RUT", "Contacto", "Comuna", "Tipo", `Arriendos ${anio}`, "Por cobrar", "Estado"].map((h) => <th key={h} style={s.th}>{h}</th>)}</tr>
+              <tr>{["Nombre / RUT", "Contacto", "Comuna", "Tipo", `Arriendos ${anio}`, "Por cobrar", "Estado"].map((h) => <th key={h} className={tw.th}>{h}</th>)}</tr>
             </thead>
             <tbody>
               {filtrados.map((c, i) => {
                 const r = resumen[c.id]
                 return (
                   <tr key={c.id} style={{ backgroundColor: i % 2 === 0 ? "#F8FAFC" : "#fff" }}>
-                    <td style={s.td}><span style={s.nombre}>{c.nombre}</span><span style={s.rutTxt}>{c.rut}</span></td>
-                    <td style={s.td}>
+                    <td className={tw.td}><span style={s.nombre}>{c.nombre}</span><span style={s.rutTxt}>{c.rut}</span></td>
+                    <td className={tw.td}>
                       {c.telefono_txt && <a href={`tel:${c.telefono_txt.replace(/\s/g, "")}`} style={{ ...s.link, display: "flex" }}><Phone size={12} />{c.telefono_txt}</a>}
                       {c.email && <a href={`mailto:${c.email}`} style={{ ...s.link, display: "flex" }}><Mail size={12} />{c.email}</a>}
                     </td>
-                    <td style={s.td}>{c.comuna || "—"}</td>
-                    <td style={s.td}>{c.tipo}</td>
-                    <td style={s.td}>{r?.anio ?? 0}</td>
-                    <td style={s.td}>
+                    <td className={tw.td}>{c.comuna || "—"}</td>
+                    <td className={tw.td}>{c.tipo}</td>
+                    <td className={tw.td}>{r?.anio ?? 0}</td>
+                    <td className={tw.td}>
                       {r?.porCobrar ? <span style={{ fontWeight: 600, color: "#92400E" }}>{clp(r.porCobrar)}</span> : "—"}
                     </td>
-                    <td style={s.td}>
+                    <td className={tw.td}>
                       <span style={{ ...s.badge, backgroundColor: c.activo ? "#D1FAE5" : "#F1F5F9", color: c.activo ? "#065F46" : "#64748B" }}>
                         {c.activo ? "Activo" : "Inactivo"}
                       </span>

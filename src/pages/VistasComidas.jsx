@@ -6,6 +6,7 @@ import { clp } from "../lib/formato"
 import EstadoCarga from "../components/EstadoCarga"
 import ModalLecheria, { Campo } from "../components/ModalLecheria"
 import s from "./estilosLecheria"
+import tw from "@/lib/ui"
 
 const UNIDADES_BASE = ["kg", "litros", "sacos", "fardos", "pacas", "toneladas", "dosis", "frascos", "unidades", "cajas"]
 const vacio = { nombre: "", stock: 0, minimo: 0, unidad: "kg", proveedor_id: "", precio: 0, categoria: "" }
@@ -75,8 +76,8 @@ export default function VistaComidas() {
   }
 
   return (
-    <div style={s.container}>
-      <div style={s.topBar}>
+    <div className={tw.container}>
+      <div className={tw.topBar}>
         <div>
           <h2 style={s.title}>Comidas y Alimentos</h2>
           <p style={s.sub}>{items.length} productos · {alertas.length} alertas de stock</p>
@@ -96,10 +97,10 @@ export default function VistaComidas() {
         </div>
       )}
 
-      <div style={s.filtros}>
-        <div style={s.buscador}>
+      <div className={tw.filtros}>
+        <div className={tw.buscador}>
           <Search size={14} color="#94A3B8" />
-          <input style={s.buscadorInput} placeholder="Buscar producto..." value={q} onChange={(e) => setQ(e.target.value)} />
+          <input className={tw.buscadorInput} placeholder="Buscar producto..." value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
         <select style={s.select} value={fCategoria} onChange={(e) => setFCategoria(e.target.value)}>
           <option value="">Todas las categorías</option>
@@ -113,25 +114,25 @@ export default function VistaComidas() {
       <EstadoCarga cargando={cargando} error={error} onReintentar={recargar} />
 
       {!cargando && !error && (
-        <div style={s.tableCard}>
-          <table style={s.table}>
+        <div className={tw.tableCard}>
+          <table className={tw.table}>
             <thead>
-              <tr>{["Producto", "Stock actual", "Mínimo", "Unidad", "Proveedor", "Precio unit.", "Estado", ""].map((h) => <th key={h} style={s.th}>{h}</th>)}</tr>
+              <tr>{["Producto", "Stock actual", "Mínimo", "Unidad", "Proveedor", "Precio unit.", "Estado", ""].map((h) => <th key={h} className={tw.th}>{h}</th>)}</tr>
             </thead>
             <tbody>
               {filtrados.map((item, i) => {
                 const st = getStockStatus(item.stock, item.minimo)
                 return (
                   <tr key={item.id} style={{ backgroundColor: i % 2 === 0 ? "#F8FAFC" : "#fff" }}>
-                    <td style={s.td}><span style={s.nombre}>{item.nombre}</span>{item.categoria && <span style={{ display: "block", fontSize: 11, color: "#94A3B8" }}>{item.categoria}</span>}</td>
-                    <td style={s.td}><span style={{ fontWeight: 600, color: Number(item.stock) === 0 ? "#EF4444" : "#1E293B" }}>{Number(item.stock).toLocaleString("es-CL")}</span></td>
-                    <td style={s.td}>{Number(item.minimo).toLocaleString("es-CL")}</td>
-                    <td style={s.td}>{item.unidad}</td>
-                    <td style={s.td}>{nombreProveedor(item.proveedor_id)}</td>
-                    <td style={s.td}>{clp(item.precio)}</td>
-                    <td style={s.td}><span style={{ ...s.badge, backgroundColor: st.bg, color: st.color }}>{st.label}</span></td>
-                    <td style={s.td}>
-                      <div style={s.actions}>
+                    <td className={tw.td}><span style={s.nombre}>{item.nombre}</span>{item.categoria && <span style={{ display: "block", fontSize: 11, color: "#94A3B8" }}>{item.categoria}</span>}</td>
+                    <td className={tw.td}><span style={{ fontWeight: 600, color: Number(item.stock) === 0 ? "#EF4444" : "#1E293B" }}>{Number(item.stock).toLocaleString("es-CL")}</span></td>
+                    <td className={tw.td}>{Number(item.minimo).toLocaleString("es-CL")}</td>
+                    <td className={tw.td}>{item.unidad}</td>
+                    <td className={tw.td}>{nombreProveedor(item.proveedor_id)}</td>
+                    <td className={tw.td}>{clp(item.precio)}</td>
+                    <td className={tw.td}><span style={{ ...s.badge, backgroundColor: st.bg, color: st.color }}>{st.label}</span></td>
+                    <td className={tw.td}>
+                      <div className={tw.actions}>
                         <button style={s.iconBtnGreen} title="Editar" onClick={() => { setModalError(null); setModal({ ...item, proveedor_id: item.proveedor_id ?? "", categoria: item.categoria ?? "" }) }}><Pencil size={14} /></button>
                         <button style={s.iconBtnRed} title="Eliminar" onClick={() => eliminar(item)}><Trash2 size={14} /></button>
                       </div>

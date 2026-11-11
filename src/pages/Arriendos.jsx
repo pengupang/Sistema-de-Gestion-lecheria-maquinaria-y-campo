@@ -7,6 +7,7 @@ import EstadoCarga from "@/components/EstadoCarga"
 import Scorecard from "@/components/maquinaria/Scorecard"
 import s, { ESTADO_ARRIENDO } from "./EstilosMaquinaria"
 import { descargarCSV } from "@/lib/exportar"
+import tw from "@/lib/ui"
 
 const POR_PAGINA = 100
 
@@ -52,8 +53,8 @@ export default function VistaArriendos() {
   const hayFiltros = q || fAnio !== anioActual || fEstado || fPago || fMaquina
 
   return (
-    <div style={s.container}>
-      <div style={s.topBar}>
+    <div className={tw.container}>
+      <div className={tw.topBar}>
         <div>
           <h2 style={s.title}>Arriendos</h2>
           <p style={s.sub}>{filtrados.length} registros{fAnio ? ` en ${fAnio}` : ""}</p>
@@ -81,7 +82,7 @@ export default function VistaArriendos() {
           </button>
       </div>
 
-      <div style={s.statsRow}>
+      <div className={tw.statsRow}>
         <Scorecard icono={CheckCircle} color="#065F46" bg="#D1FAE5" valor={clp(suma(pagados))} etiqueta="Pagado (neto)" detalle={`${pagados.length} arriendos`} />
         <Scorecard icono={Clock} color="#92400E" bg="#FEF3C7" valor={clp(suma(pendientes))} etiqueta="Por cobrar (neto)" detalle={`${pendientes.length} arriendos`} />
         <Scorecard icono={DollarSign} color="#4A6FA5" bg="#EBF2FB" valor={clp(suma(pagados) + suma(pendientes))} etiqueta="Total facturable" />
@@ -90,10 +91,10 @@ export default function VistaArriendos() {
           detalle={`${horas.toLocaleString("es-CL")} horas`} />
       </div>
 
-      <div style={s.filtros}>
-        <div style={s.buscador}>
+      <div className={tw.filtros}>
+        <div className={tw.buscador}>
           <Search size={14} color="#94A3B8" />
-          <input style={s.buscadorInput} placeholder="Buscar cliente, máquina, servicio o predio..." value={q} onChange={filtrar(setQ)} />
+          <input className={tw.buscadorInput} placeholder="Buscar cliente, máquina, servicio o predio..." value={q} onChange={filtrar(setQ)} />
         </div>
         <select style={s.select} value={fAnio} onChange={filtrar(setFAnio)}>
           <option value="">Todos los años</option>
@@ -122,33 +123,33 @@ export default function VistaArriendos() {
       <EstadoCarga cargando={cargando} error={error} onReintentar={recargar} />
 
       {!cargando && !error && (
-        <div style={s.tableCard}>
-          <table style={s.table}>
+        <div className={tw.tableCard}>
+          <table className={tw.table}>
             <thead>
-              <tr>{["Cliente", "Máquina / Servicio", "Periodo", "Cantidad", "Monto neto", "Pago", "Estado"].map((h) => <th key={h} style={s.th}>{h}</th>)}</tr>
+              <tr>{["Cliente", "Máquina / Servicio", "Periodo", "Cantidad", "Monto neto", "Pago", "Estado"].map((h) => <th key={h} className={tw.th}>{h}</th>)}</tr>
             </thead>
             <tbody>
               {filtrados.slice(0, limite).map((a, i) => (
                 <tr key={a.id} style={{ backgroundColor: i % 2 === 0 ? "#F8FAFC" : "#fff" }}>
-                  <td style={s.td}><span style={s.nombre}>{a.cliente?.nombre}</span><span style={s.rutTxt}>{[a.predio, a.comuna].filter(Boolean).join(" · ")}</span></td>
-                  <td style={s.td}>
+                  <td className={tw.td}><span style={s.nombre}>{a.cliente?.nombre}</span><span style={s.rutTxt}>{[a.predio, a.comuna].filter(Boolean).join(" · ")}</span></td>
+                  <td className={tw.td}>
                     <span style={{ display: "block", fontWeight: 600, color: "#1E293B", fontSize: 12 }}>{a.maquina?.nombre} {a.maquina?.modelo}</span>
                     <span style={s.rutTxt}>{a.servicio?.nombre}</span>
                   </td>
-                  <td style={s.td}>
+                  <td className={tw.td}>
                     <span style={{ fontSize: 12 }}>{fechaCL(a.inicio)}</span>
                     {a.fin !== a.inicio && <span style={s.rutTxt}>hasta {fechaCL(a.fin)}</span>}
                   </td>
-                  <td style={s.td}>{Number(a.cantidad).toLocaleString("es-CL")} {a.unidad === "horas" ? "h" : "ha"}</td>
-                  <td style={{ ...s.td, fontWeight: 600 }}>
+                  <td className={tw.td}>{Number(a.cantidad).toLocaleString("es-CL")} {a.unidad === "horas" ? "h" : "ha"}</td>
+                  <td className={tw.td} style={{ fontWeight: 600 }}>
                     {clp(a.monto)}
                   </td>
-                  <td style={s.td}>
+                  <td className={tw.td}>
                     <span style={{ ...s.badge, backgroundColor: a.pagado ? "#D1FAE5" : "#FEF3C7", color: a.pagado ? "#065F46" : "#92400E" }}>
                       {a.pagado ? "✓ Pagado" : "Pendiente"}
                     </span>
                   </td>
-                  <td style={s.td}><span style={{ ...s.badge, ...ESTADO_ARRIENDO[a.estado] }}>{a.estado}</span></td>
+                  <td className={tw.td}><span style={{ ...s.badge, ...ESTADO_ARRIENDO[a.estado] }}>{a.estado}</span></td>
                 </tr>
               ))}
               {filtrados.length === 0 && <tr><td colSpan={7} style={s.vacio}>No hay arriendos con esos filtros.</td></tr>}

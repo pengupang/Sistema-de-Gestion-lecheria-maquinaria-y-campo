@@ -5,6 +5,7 @@ import { animales as animalesApi, potreros as potrerosApi, etiquetaAnimal } from
 import ModalLecheria, { Campo } from "../components/ModalLecheria"
 import { descendientes } from "../lib/genealogia"
 import s from "./estilosLecheria"
+import tw from "@/lib/ui"
 
 const CATEGORIAS = {
   vaca_ordena: "Vaca en ordeña",
@@ -163,8 +164,8 @@ export default function RebanoPotreros() {
   if (cargando) return <p style={s.sub}>Cargando...</p>
 
   return (
-    <div style={s.container}>
-      <div style={s.topBar}>
+    <div className={tw.container}>
+      <div className={tw.topBar}>
         <div>
           <h2 style={s.title}>Rebaño y Potreros</h2>
           <p style={s.sub}>{activos.length} animales activos · {potreros.length} potreros</p>
@@ -176,7 +177,7 @@ export default function RebanoPotreros() {
 
       {error && <div style={s.errorBox}>{error}</div>}
 
-      <div style={s.statsRow}>
+      <div className={tw.statsRow}>
         <div style={s.stat}><p style={s.statValue}>{activos.length}</p><p style={s.statLabel}>Animales activos</p></div>
         <div style={s.stat}><p style={s.statValue}>{activos.filter((a) => a.categoria === "vaca_ordena").length}</p><p style={s.statLabel}>Vacas en ordeña</p></div>
         <div style={s.stat}><p style={s.statValue}>{potreros.filter((p) => p.estado === "en_uso").length}</p><p style={s.statLabel}>Potreros en uso</p></div>
@@ -192,9 +193,9 @@ export default function RebanoPotreros() {
         </div>
       )}
 
-      <div style={s.tabs}>
+      <div className={tw.tabs}>
         {[["animales", "Animales"], ["potreros", "Potreros"]].map(([id, label]) => (
-          <button key={id} style={{ ...s.tab, ...(tab === id ? s.tabActive : {}) }} onClick={() => setTab(id)}>
+          <button key={id} className={tw.tab} style={{ ...(tab === id ? s.tabActive : {}) }} onClick={() => setTab(id)}>
             {label}
           </button>
         ))}
@@ -202,10 +203,10 @@ export default function RebanoPotreros() {
 
       {tab === "animales" && (
         <>
-          <div style={s.filtros}>
-            <div style={s.buscador}>
+          <div className={tw.filtros}>
+            <div className={tw.buscador}>
               <Search size={14} color="#94A3B8" />
-              <input style={s.buscadorInput} placeholder="Buscar arete o nombre" value={q} onChange={(e) => setQ(e.target.value)} />
+              <input className={tw.buscadorInput} placeholder="Buscar arete o nombre" value={q} onChange={(e) => setQ(e.target.value)} />
             </div>
             <select style={s.select} value={fCategoria} onChange={(e) => setFCategoria(e.target.value)}>
               <option value="">Todas las categorías</option>
@@ -218,26 +219,26 @@ export default function RebanoPotreros() {
             </select>
           </div>
 
-          <div style={s.tableCard}>
-            <table style={s.table}>
+          <div className={tw.tableCard}>
+            <table className={tw.table}>
               <thead>
-                <tr>{["Arete", "Nombre", "Categoría", "Potrero", "Nacimiento", "Estado", ""].map((h) => <th key={h} style={s.th}>{h}</th>)}</tr>
+                <tr>{["Arete", "Nombre", "Categoría", "Potrero", "Nacimiento", "Estado", ""].map((h) => <th key={h} className={tw.th}>{h}</th>)}</tr>
               </thead>
               <tbody>
                 {animalesFiltrados.map((a, i) => (
                   <tr key={a.id} style={{ backgroundColor: i % 2 === 0 ? "#F8FAFC" : "#fff" }}>
-                    <td style={s.td}><span style={s.nombre}>{a.arete}</span></td>
-                    <td style={s.td}>{a.nombre || "—"}</td>
-                    <td style={s.td}>{CATEGORIAS[a.categoria]}</td>
-                    <td style={s.td}>{nombrePotrero(a.potrero_id)}</td>
-                    <td style={s.td}>{a.fecha_nacimiento ? a.fecha_nacimiento.split("-").reverse().join("/") : "—"}</td>
-                    <td style={s.td}>
+                    <td className={tw.td}><span style={s.nombre}>{a.arete}</span></td>
+                    <td className={tw.td}>{a.nombre || "—"}</td>
+                    <td className={tw.td}>{CATEGORIAS[a.categoria]}</td>
+                    <td className={tw.td}>{nombrePotrero(a.potrero_id)}</td>
+                    <td className={tw.td}>{a.fecha_nacimiento ? a.fecha_nacimiento.split("-").reverse().join("/") : "—"}</td>
+                    <td className={tw.td}>
                       <span style={{ ...s.badge, backgroundColor: a.estado === "activo" ? "#D1FAE5" : "#F1F5F9", color: a.estado === "activo" ? "#065F46" : "#64748B" }}>
                         {a.estado === "activo" ? "Activo" : "Baja"}
                       </span>
                     </td>
-                    <td style={s.td}>
-                      <div style={s.actions}>
+                    <td className={tw.td}>
+                      <div className={tw.actions}>
                         <button style={s.iconBtnGreen} title="Ver genealogía" onClick={() => navigate(`/lecheria/genealogia?animal=${a.id}`)}><GitBranch size={14} /></button>
                         <button style={s.iconBtnGreen} title="Editar" onClick={() => abrir("animal", formAnimal(a))}><Pencil size={14} /></button>
                         <button style={s.iconBtnRed} onClick={() => eliminarAnimal(a)}><Trash2 size={14} /></button>
@@ -253,7 +254,7 @@ export default function RebanoPotreros() {
       )}
 
       {tab === "potreros" && (
-        <div style={s.cardsGrid}>
+        <div className={tw.cardsGrid}>
           {potreros.map((p) => {
             const n = ocupacion(p.id)
             const pct = p.capacidad > 0 ? Math.min(100, Math.round((n / p.capacidad) * 100)) : 0
@@ -276,7 +277,7 @@ export default function RebanoPotreros() {
                     <div style={{ width: `${pct}%`, height: "100%", backgroundColor: sobre ? "#EF4444" : pct > 80 ? "#F59E0B" : "#3D6B4F" }} />
                   </div>
                 </div>
-                <div style={s.actions}>
+                <div className={tw.actions}>
                   <button style={s.iconBtnGreen} onClick={() => abrir("potrero", { ...p })}><Pencil size={14} /></button>
                   <button style={s.iconBtnRed} onClick={() => eliminarPotrero(p)}><Trash2 size={14} /></button>
                 </div>

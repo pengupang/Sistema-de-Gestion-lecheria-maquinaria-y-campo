@@ -112,7 +112,7 @@ export default function VistaFacturacion() {
       </div>
 
       {/* Gráficos */}
-      <div style={styles.chartsRow}>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div style={styles.chartCard}>
           <h3 style={styles.chartTitle}>Ingresos mensuales {anio}</h3>
           <ResponsiveContainer width="100%" height={200}>
@@ -138,7 +138,7 @@ export default function VistaFacturacion() {
       </div>
 
       {/* Top servicios y máquinas */}
-      <div style={styles.topRow}>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {[["Top servicios", topServicios, "#4A6FA5"], ["Top maquinaria", topMaquinas, "#1B2A4A"]].map(([titulo, lista, color]) => (
           <div key={titulo} style={styles.topCard}>
             <h3 style={styles.chartTitle}>{titulo}</h3>
@@ -203,7 +203,7 @@ export default function VistaFacturacion() {
 const styles = {
   select:{padding:"8px 10px",border:"1px solid #E2E8F0",borderRadius:"6px",fontSize:"13px",backgroundColor:"#fff",color:"#334155"},
   container:{display:"flex",flexDirection:"column",gap:"20px"},
-  topBar:{display:"flex",justifyContent:"space-between",alignItems:"flex-start"},
+  topBar:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:"12px"},
   title:{fontSize:"18px",fontWeight:700,color:"#1E293B",margin:0},
   sub:{fontSize:"13px",color:"#94A3B8",margin:"4px 0 0 0"},
   kpiGrid:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:"16px"},
@@ -212,7 +212,7 @@ const styles = {
   kpiVal:{fontSize:"20px",fontWeight:700,color:"#1E293B",margin:"0 0 2px 0"},
   kpiLab:{fontSize:"12px",color:"#94A3B8",margin:0},
   chartsRow:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"16px"},
-  chartCard:{backgroundColor:"#fff",borderRadius:"10px",padding:"20px",border:"1px solid #E2E8F0"},
+  chartCard:{backgroundColor:"#fff",borderRadius:"10px",padding:"20px",border:"1px solid #E2E8F0",minWidth:0},
   chartTitle:{fontSize:"14px",fontWeight:600,color:"#1E293B",margin:"0 0 16px 0"},
   topRow:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"16px"},
   topCard:{backgroundColor:"#fff",borderRadius:"10px",padding:"20px",border:"1px solid #E2E8F0"},
@@ -222,11 +222,11 @@ const styles = {
   topBar2:{height:6,backgroundColor:"#F1F5F9",borderRadius:"3px",overflow:"hidden"},
   topBarFill:{height:"100%",borderRadius:"3px",transition:"width 0.3s"},
   topMonto:{fontSize:"12px",fontWeight:700,color:"#1E293B",flexShrink:0},
-  tableCard:{backgroundColor:"#fff",borderRadius:"10px",border:"1px solid #E2E8F0",overflow:"hidden"},
-  tableTopBar:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 16px 0 16px"},
-  searchBox:{display:"flex",alignItems:"center",gap:"8px",padding:"7px 12px",border:"1px solid #E2E8F0",borderRadius:"6px",backgroundColor:"#F8FAFC"},
-  searchInput:{border:"none",background:"none",fontSize:"13px",outline:"none",width:"220px",color:"#334155"},
-  table:{width:"100%",borderCollapse:"collapse",marginTop:"12px"},
+  tableCard:{backgroundColor:"#fff",borderRadius:"10px",border:"1px solid #E2E8F0",overflowX:"auto"},
+  tableTopBar:{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"10px",padding:"16px 16px 0 16px"},
+  searchBox:{display:"flex",alignItems:"center",gap:"8px",padding:"7px 12px",border:"1px solid #E2E8F0",borderRadius:"6px",backgroundColor:"#F8FAFC",flex:"1 1 240px",maxWidth:"360px"},
+  searchInput:{border:"none",background:"none",fontSize:"13px",outline:"none",width:"100%",minWidth:0,color:"#334155"},
+  table:{width:"100%",borderCollapse:"collapse",marginTop:"12px",minWidth:"720px"},
   th:{textAlign:"left",fontSize:"11px",fontWeight:600,color:"#94A3B8",padding:"10px 16px",borderBottom:"1px solid #E2E8F0",textTransform:"uppercase",letterSpacing:"0.05em",backgroundColor:"#F8FAFC"},
   td:{padding:"11px 16px",fontSize:"13px",color:"#334155",borderBottom:"1px solid #F1F5F9"},
 }

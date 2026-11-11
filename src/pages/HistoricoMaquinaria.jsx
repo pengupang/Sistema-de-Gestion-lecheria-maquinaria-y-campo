@@ -184,10 +184,10 @@ const styles = {
   compVal:{display:"block",fontSize:"18px",fontWeight:700,color:"#1E293B"},
   compDivider:{width:1,height:36,backgroundColor:"#E2E8F0"},
   compSub:{fontSize:"11px",color:"#94A3B8",margin:0},
-  chartCard:{backgroundColor:"#fff",borderRadius:"10px",padding:"20px",border:"1px solid #E2E8F0"},
+  chartCard:{backgroundColor:"#fff",borderRadius:"10px",padding:"20px",border:"1px solid #E2E8F0",minWidth:0},
   chartTitle:{fontSize:"14px",fontWeight:600,color:"#1E293B",margin:"0 0 16px 0"},
-  tableCard:{backgroundColor:"#fff",borderRadius:"10px",border:"1px solid #E2E8F0",overflow:"hidden",padding:"20px"},
-  table:{width:"100%",borderCollapse:"collapse"},
+  tableCard:{backgroundColor:"#fff",borderRadius:"10px",border:"1px solid #E2E8F0",overflowX:"auto",padding:"20px"},
+  table:{width:"100%",borderCollapse:"collapse",minWidth:"560px"},
   th:{textAlign:"left",fontSize:"11px",fontWeight:600,color:"#94A3B8",padding:"10px 16px",borderBottom:"1px solid #E2E8F0",textTransform:"uppercase",letterSpacing:"0.05em",backgroundColor:"#F8FAFC"},
   td:{padding:"10px 16px",fontSize:"13px",color:"#334155",borderBottom:"1px solid #F1F5F9"},
 }

@@ -175,7 +175,9 @@ const styles = {
     padding: "20px",
     border: "1px solid #D1E8DA",
     boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
-    minWidth: "280px",
+    minWidth: "min(280px, 100%)",
+    flex: "1 1 320px",
+    overflowX: "auto",
   },
   tableHeader: {
     display: "flex",

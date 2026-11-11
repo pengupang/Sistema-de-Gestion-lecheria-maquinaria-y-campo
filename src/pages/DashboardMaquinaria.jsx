@@ -25,7 +25,7 @@ export default function DashboardMaquinaria() {
       {r && (<>
       {/* Stats */}
       
-      <div style={{...styles.grid, gridTemplateColumns:"repeat(3, minmax(0, 1fr))"}}>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {stats.map(({ label, value, icon: Icon, color, bg, sub }) => (
           <div key={label} style={styles.card}>
             <div style={{ ...styles.iconBox, backgroundColor: bg }}>
@@ -43,8 +43,8 @@ export default function DashboardMaquinaria() {
       
 
       {/* Arriendos recientes */}
-      <div className="columns-2 p-6 md:p-8 bg-slate-100 min-h-screen">
-      <div style={styles.tableCard}>
+      <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[3fr_2fr]">
+      <div className="min-w-0 overflow-x-auto" style={styles.tableCard}>
         <h3 style={styles.tableTitle}>Arriendos recientes</h3>
         <table style={styles.table}>
           <thead>
@@ -79,7 +79,7 @@ export default function DashboardMaquinaria() {
       </div>
 
       {/* Próximas mantenciones */}
-      <div style={styles.tableCard}>
+      <div className="min-w-0 overflow-x-auto" style={styles.tableCard}>
         <h3 style={styles.tableTitle}>Próximas mantenciones</h3>
         <table style={styles.table}>
           <thead>
@@ -170,7 +170,8 @@ const styles = {
     margin: "0 0 16px 0",
   },
   table: {
-    width: "w-auto",
+    width: "100%",
+    minWidth: "480px",
     borderCollapse: "collapse",
   },
   th: {
@@ -184,7 +185,7 @@ const styles = {
     letterSpacing: "0.05em",
   },
   td: {
-    padding: "10px 5px",
+    padding: "10px 12px",
     fontSize: "13px",
     color: "#334155",
     borderBottom: "1px solid #F1F5F9",

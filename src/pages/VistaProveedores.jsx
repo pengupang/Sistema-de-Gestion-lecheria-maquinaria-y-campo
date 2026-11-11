@@ -6,6 +6,7 @@ import useCarga from "../lib/useCarga"
 import EstadoCarga from "../components/EstadoCarga"
 import ModalLecheria, { Campo } from "../components/ModalLecheria"
 import s from "./estilosLecheria"
+import tw from "@/lib/ui"
 
 const vacio = { nombre: "", rut: "", contacto: "", telefono: "", email: "", rubro: "", comuna: "" }
 const iconBtnBlue = { ...s.iconBtnGreen, background: "#EBF2FB", color: "#4A6FA5" }
@@ -57,8 +58,8 @@ export default function VistaProveedores() {
   }
 
   return (
-    <div style={s.container}>
-      <div style={s.topBar}>
+    <div className={tw.container}>
+      <div className={tw.topBar}>
         <div>
           <h2 style={s.title}>Proveedores</h2>
           <p style={s.sub}>{proveedores.length} proveedores registrados</p>
@@ -68,33 +69,33 @@ export default function VistaProveedores() {
         </button>
       </div>
 
-      <div style={s.filtros}>
-        <div style={s.buscador}>
+      <div className={tw.filtros}>
+        <div className={tw.buscador}>
           <Search size={14} color="#94A3B8" />
-          <input style={s.buscadorInput} placeholder="Buscar empresa, RUT o rubro..." value={q} onChange={(e) => setQ(e.target.value)} />
+          <input className={tw.buscadorInput} placeholder="Buscar empresa, RUT o rubro..." value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
       </div>
 
       <EstadoCarga cargando={cargando} error={error} onReintentar={recargar} />
 
       {!cargando && !error && (
-        <div style={s.tableCard}>
-          <table style={s.table}>
+        <div className={tw.tableCard}>
+          <table className={tw.table}>
             <thead>
-              <tr>{["Empresa", "RUT", "Contacto", "Teléfono", "Email", "Rubro", "Comuna", ""].map((h) => <th key={h} style={s.th}>{h}</th>)}</tr>
+              <tr>{["Empresa", "RUT", "Contacto", "Teléfono", "Email", "Rubro", "Comuna", ""].map((h) => <th key={h} className={tw.th}>{h}</th>)}</tr>
             </thead>
             <tbody>
               {filtrados.map((p, i) => (
                 <tr key={p.id} style={{ backgroundColor: i % 2 === 0 ? "#F8FAFC" : "#fff" }}>
-                  <td style={s.td}><span style={s.nombre}>{p.nombre}</span></td>
-                  <td style={s.td}>{p.rut}</td>
-                  <td style={s.td}>{p.contacto}</td>
-                  <td style={s.td}>{p.telefono && <a href={`tel:${p.telefono.replace(/\s/g, "")}`} style={link}><Phone size={12} /> {p.telefono}</a>}</td>
-                  <td style={s.td}>{p.email && <a href={`mailto:${p.email}`} style={link}><Mail size={12} /> {p.email}</a>}</td>
-                  <td style={s.td}>{p.rubro}</td>
-                  <td style={s.td}>{p.comuna}</td>
-                  <td style={s.td}>
-                    <div style={s.actions}>
+                  <td className={tw.td}><span style={s.nombre}>{p.nombre}</span></td>
+                  <td className={tw.td}>{p.rut}</td>
+                  <td className={tw.td}>{p.contacto}</td>
+                  <td className={tw.td}>{p.telefono && <a href={`tel:${p.telefono.replace(/\s/g, "")}`} style={link}><Phone size={12} /> {p.telefono}</a>}</td>
+                  <td className={tw.td}>{p.email && <a href={`mailto:${p.email}`} style={link}><Mail size={12} /> {p.email}</a>}</td>
+                  <td className={tw.td}>{p.rubro}</td>
+                  <td className={tw.td}>{p.comuna}</td>
+                  <td className={tw.td}>
+                    <div className={tw.actions}>
                       <button style={iconBtnBlue} title="Editar" onClick={() => { setModalError(null); setModal({ ...p, comuna: p.comuna ?? "" }) }}><Pencil size={14} /></button>
                       <button style={s.iconBtnRed} title="Eliminar" onClick={() => eliminar(p)}><Trash2 size={14} /></button>
                     </div>

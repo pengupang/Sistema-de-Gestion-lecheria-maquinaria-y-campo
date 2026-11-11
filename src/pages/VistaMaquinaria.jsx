@@ -7,6 +7,7 @@ import EstadoCarga from "@/components/EstadoCarga"
 import Scorecard from "@/components/maquinaria/Scorecard"
 import s, { ESTADO_MAQUINA } from "./EstilosMaquinaria"
 import { descargarCSV } from "@/lib/exportar"
+import tw from "@/lib/ui"
 
 // Vista de solo lectura. Ingreso y edición: /maquinaria/registrar?tipo=maquina (desde el menú "Registrar")
 export default function VistaMaquinaria() {
@@ -74,8 +75,8 @@ const masFallas = maquinas.reduce(
   const masUsada = maquinas.reduce((top, m) => ((uso[m.id]?.n ?? 0) > (uso[top?.id]?.n ?? 0) ? m : top), null)
 
   return (
-    <div style={s.container}>
-      <div style={s.topBar}>
+    <div className={tw.container}>
+      <div className={tw.topBar}>
         <div>
           <h2 style={s.title}>Maquinaria</h2>
           <p style={s.sub}>{filtradas.length} de {maquinas.length} equipos</p>
@@ -100,7 +101,7 @@ const masFallas = maquinas.reduce(
 </button>
       </div>
 
-      <div style={{...s.statsRow, gridTemplateColumns:"repeat(3, minmax(0, 1fr))"}}>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         <Scorecard icono={Wrench} color="#4A6FA5" bg="#EBF2FB" valor={maquinas.length} etiqueta="Equipos registrados" />
         <Scorecard icono={CheckCircle} color="#065F46" bg="#D1FAE5" valor={cuenta("Disponible")} etiqueta="Disponibles" />
         <Scorecard icono={FileText} color="#92400E" bg="#FEF3C7" valor={cuenta("Arrendada")} etiqueta="En arriendo" />
@@ -117,10 +118,10 @@ const masFallas = maquinas.reduce(
           : null} />
       </div>
 
-      <div style={s.filtros}>
-        <div style={s.buscador}>
+      <div className={tw.filtros}>
+        <div className={tw.buscador}>
           <Search size={14} color="#94A3B8" />
-          <input style={s.buscadorInput} placeholder="Buscar nombre, modelo o tipo..." value={q} onChange={(e) => setQ(e.target.value)} />
+          <input className={tw.buscadorInput} placeholder="Buscar nombre, modelo o tipo..." value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
         <select style={s.select} value={fEstado} onChange={(e) => setFEstado(e.target.value)}>
           <option value="">Todos los estados</option>
@@ -138,25 +139,25 @@ const masFallas = maquinas.reduce(
       <EstadoCarga cargando={cargando} error={error} onReintentar={recargar} />
 
       {!cargando && !error && (
-        <div style={s.tableCard}>
-          <table style={s.table}>
+        <div className={tw.tableCard}>
+          <table className={tw.table}>
             <thead>
-              <tr>{["Nombre / Modelo", "Tipo", "Estado", "Tarifa ref.", `Arriendos`, `Ingresos `, "Último uso", "Fallas", "Horas detenidas"].map((h) => <th key={h} style={s.th}>{h}</th>)}</tr>
+              <tr>{["Nombre / Modelo", "Tipo", "Estado", "Tarifa ref.", `Arriendos`, `Ingresos `, "Último uso", "Fallas", "Horas detenidas"].map((h) => <th key={h} className={tw.th}>{h}</th>)}</tr>
             </thead>
             <tbody>
               {filtradas.map((m, i) => {
                 const u = uso[m.id]
                 return (
                   <tr key={m.id} style={{ backgroundColor: i % 2 === 0 ? "#F8FAFC" : "#fff" }}>
-                    <td style={s.td}><span style={s.nombre}>{m.nombre}</span><span style={s.rutTxt}>{m.modelo}</span></td>
-                    <td style={s.td}>{m.tipo || "—"}</td>
-                    <td style={s.td}><span style={{ ...s.badge, ...ESTADO_MAQUINA[m.estado] }}>{m.estado}</span></td>
-                    <td style={s.td}>{clp(m.precio)} <span style={{ color: "#94A3B8" }}>/ {m.unidad_cobro}</span></td>
-                    <td style={s.td}>{u?.n ?? 0}</td>
-                    <td style={s.td}>{u ? clp(u.monto) : "—"}</td>
-                    <td style={s.td}>{u?.ultimo ? fechaCL(u.ultimo) : "—"}</td>
-                    <td style={s.td}>{fallasPorMaquina[m.id]?.n ?? 0}</td>
-                    <td style={s.td}>{fallasPorMaquina[m.id] ? `${Math.round(fallasPorMaquina[m.id].horas)} h` : "—"}</td>
+                    <td className={tw.td}><span style={s.nombre}>{m.nombre}</span><span style={s.rutTxt}>{m.modelo}</span></td>
+                    <td className={tw.td}>{m.tipo || "—"}</td>
+                    <td className={tw.td}><span style={{ ...s.badge, ...ESTADO_MAQUINA[m.estado] }}>{m.estado}</span></td>
+                    <td className={tw.td}>{clp(m.precio)} <span style={{ color: "#94A3B8" }}>/ {m.unidad_cobro}</span></td>
+                    <td className={tw.td}>{u?.n ?? 0}</td>
+                    <td className={tw.td}>{u ? clp(u.monto) : "—"}</td>
+                    <td className={tw.td}>{u?.ultimo ? fechaCL(u.ultimo) : "—"}</td>
+                    <td className={tw.td}>{fallasPorMaquina[m.id]?.n ?? 0}</td>
+                    <td className={tw.td}>{fallasPorMaquina[m.id] ? `${Math.round(fallasPorMaquina[m.id].horas)} h` : "—"}</td>
                   </tr>
                 )
               })}

@@ -4,6 +4,7 @@ import { AlertTriangle } from "lucide-react"
 import { animales as animalesApi, etiquetaAnimal } from "../services/lecheria"
 import { construirPedigri, crias, hermanos, ancestrosComunes, descendientes } from "../lib/genealogia"
 import s from "./estilosLecheria"
+import tw from "@/lib/ui"
 
 const CATEGORIAS = { vaca_ordena: "Vaca en ordeña", vaca_seca: "Vaca seca", vaquilla: "Vaquilla", ternero: "Ternero/a", toro: "Toro" }
 const COLORES = {
@@ -92,13 +93,13 @@ export default function Genealogia() {
   if (!animal) return <p style={s.sub}>Aún no hay animales registrados. Agrégalos en Rebaño y Potreros.</p>
 
   return (
-    <div style={s.container}>
-      <div style={s.topBar}>
+    <div className={tw.container}>
+      <div className={tw.topBar}>
         <div>
           <h2 style={s.title}>Genealogía</h2>
           <p style={s.sub}>Ascendencia, descendencia y parentesco · se edita desde Rebaño y Potreros</p>
         </div>
-        <div style={s.filtros}>
+        <div className={tw.filtros}>
           <select style={s.select} value={animal.id} onChange={(e) => seleccionar(Number(e.target.value))}>
             {animales.map((a) => <option key={a.id} value={a.id}>{etiquetaAnimal(a)}</option>)}
           </select>
@@ -119,14 +120,14 @@ export default function Genealogia() {
         </div>
       )}
 
-      <div style={s.statsRow}>
+      <div className={tw.statsRow}>
         <div style={s.stat}><p style={s.statValue}>{listaCrias.length}</p><p style={s.statLabel}>Crías directas</p></div>
         <div style={s.stat}><p style={s.statValue}>{totalDesc}</p><p style={s.statLabel}>Descendientes totales</p></div>
         <div style={s.stat}><p style={s.statValue}>{listaHermanos.length}</p><p style={s.statLabel}>Hermanos y medios hermanos</p></div>
       </div>
 
       {/* Pedigrí: de izquierda (animal) a derecha (ancestros más lejanos) */}
-      <div style={{ ...s.tableCard, padding: 16 }}>
+      <div className={tw.tableCard} style={{ padding: 16 }}>
         <div style={{ display: "flex", gap: 24, minWidth: "max-content" }}>
           {niveles.map((slots, g) => (
             <div key={g} style={{ display: "flex", flexDirection: "column" }}>
@@ -145,16 +146,16 @@ export default function Genealogia() {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 16 }}>
-        <div style={s.tableCard}>
+        <div className={tw.tableCard}>
           <p style={{ ...s.nombre, padding: "14px 16px 0" }}>Crías de {etiquetaAnimal(animal)}</p>
-          <table style={{ ...s.table, minWidth: 0 }}>
-            <thead><tr>{["Cría", "Nacimiento", "Otro progenitor"].map((h) => <th key={h} style={s.th}>{h}</th>)}</tr></thead>
+          <table className={tw.table} style={{ minWidth: 0 }}>
+            <thead><tr>{["Cría", "Nacimiento", "Otro progenitor"].map((h) => <th key={h} className={tw.th}>{h}</th>)}</tr></thead>
             <tbody>
               {listaCrias.map((c) => (
                 <tr key={c.id} style={{ cursor: "pointer" }} onClick={() => seleccionar(c.id)}>
-                  <td style={s.td}><span style={s.nombre}>{etiquetaAnimal(c)}</span></td>
-                  <td style={s.td}>{c.fecha_nacimiento ? c.fecha_nacimiento.split("-").reverse().join("/") : "—"}</td>
-                  <td style={s.td}>{otroProgenitor(c)}</td>
+                  <td className={tw.td}><span style={s.nombre}>{etiquetaAnimal(c)}</span></td>
+                  <td className={tw.td}>{c.fecha_nacimiento ? c.fecha_nacimiento.split("-").reverse().join("/") : "—"}</td>
+                  <td className={tw.td}>{otroProgenitor(c)}</td>
                 </tr>
               ))}
             </tbody>
@@ -162,16 +163,16 @@ export default function Genealogia() {
           {listaCrias.length === 0 && <p style={s.vacio}>Sin crías registradas.</p>}
         </div>
 
-        <div style={s.tableCard}>
+        <div className={tw.tableCard}>
           <p style={{ ...s.nombre, padding: "14px 16px 0" }}>Hermanos</p>
-          <table style={{ ...s.table, minWidth: 0 }}>
-            <thead><tr>{["Animal", "Nacimiento", "Parentesco"].map((h) => <th key={h} style={s.th}>{h}</th>)}</tr></thead>
+          <table className={tw.table} style={{ minWidth: 0 }}>
+            <thead><tr>{["Animal", "Nacimiento", "Parentesco"].map((h) => <th key={h} className={tw.th}>{h}</th>)}</tr></thead>
             <tbody>
               {listaHermanos.map((h) => (
                 <tr key={h.id} style={{ cursor: "pointer" }} onClick={() => seleccionar(h.id)}>
-                  <td style={s.td}><span style={s.nombre}>{etiquetaAnimal(h)}</span></td>
-                  <td style={s.td}>{h.fecha_nacimiento ? h.fecha_nacimiento.split("-").reverse().join("/") : "—"}</td>
-                  <td style={s.td}>{parentesco(h)}</td>
+                  <td className={tw.td}><span style={s.nombre}>{etiquetaAnimal(h)}</span></td>
+                  <td className={tw.td}>{h.fecha_nacimiento ? h.fecha_nacimiento.split("-").reverse().join("/") : "—"}</td>
+                  <td className={tw.td}>{parentesco(h)}</td>
                 </tr>
               ))}
             </tbody>

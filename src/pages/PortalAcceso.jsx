@@ -22,7 +22,7 @@ export default function PortalAcceso() {
   };
 
   return (
-    <div style={styles.container}>
+    <div className="relative flex h-dvh w-full flex-col overflow-hidden md:flex-row" style={{ fontFamily: "'Inter', system-ui, sans-serif", cursor: "pointer" }}>
       <div style={{ position: "absolute", top: 16, left: 16, zIndex: 20 }}>
         <SelectorEmpresa oscuro />
       </div>
@@ -49,7 +49,7 @@ export default function PortalAcceso() {
           e.currentTarget.style.flex = "0.5";
         }}
       >
-        <div style={styles.content}>
+        <div className="px-6 py-16 md:py-0" style={styles.content}>
           <span style={styles.eyebrowLeft}>Sistema de gestión</span>
           <h1 style={styles.titleLeft}>Arriendo de<br />Maquinaria</h1>
           <p style={styles.desc}>
@@ -61,7 +61,7 @@ export default function PortalAcceso() {
       </div>
 
       {/* Divisor central */}
-      <div style={styles.divider}>
+      <div className="hidden md:flex" style={styles.divider}>
         <div style={styles.dividerLine} />
         <div style={styles.dividerDot} />
         <div style={styles.dividerLine} />
@@ -78,7 +78,7 @@ export default function PortalAcceso() {
           e.currentTarget.style.flex = "0.5";
         }}
       >
-        <div style={styles.content}>
+        <div className="px-6 py-16 md:py-0" style={styles.content}>
           <span style={styles.eyebrowRight}>Inventario y campo</span>
           <h1 style={styles.titleRight}>Lechería</h1>
           <p style={styles.desc}>
